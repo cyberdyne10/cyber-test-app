@@ -322,10 +322,14 @@ textarea.form-control:focus {
   }
   .main-shell {
     max-width: 100%;
+    margin: 0;
   }
   .panel-glass {
     padding: 1.4rem 1.0rem;
     border-radius: 0;
+    box-shadow: none;
+    border-left: none;
+    border-right: none;
   }
   .panel-header {
     flex-direction: column;
