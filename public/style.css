@@ -136,11 +136,11 @@ body::before {
 }
 
 .badge-chip {
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.18em;
   color: var(--accent);
-  padding: 0.25rem 0.75rem;
+  padding: 0.3rem 0.95rem;
   border-radius: 999px;
   border: 1px solid rgba(56, 189, 248, 0.35);
   background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 50%);
