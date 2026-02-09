@@ -27,6 +27,24 @@ body {
   color: var(--text-main);
 }
 
+/* Large logo watermark */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url('logo-cyber-logic.png') no-repeat center center;
+  background-size: 420px auto;
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(0.2px);
+}
+
+.main-shell {
+  position: relative;
+  z-index: 1;
+}
+
 .main-shell {
   max-width: 960px;
   margin: 0 auto;
