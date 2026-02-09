@@ -33,8 +33,8 @@ body::before {
   position: fixed;
   inset: 0;
   background: url('logo-cyber-logic.png') no-repeat center center;
-  background-size: 420px auto;
-  opacity: 0.03;
+  background-size: 520px auto;
+  opacity: 0.06;
   pointer-events: none;
   z-index: 0;
   filter: blur(0.2px);
