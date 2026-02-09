@@ -335,11 +335,12 @@ textarea.form-control:focus {
   .row-grid {
     grid-template-columns: 1fr;
   }
-  .d-flex {
+  .btn-row-stack {
+    display: flex;
     flex-direction: column;
     gap: 0.75rem;
   }
-  .d-flex > * {
+  .btn-row-stack > * {
     width: 100%;
   }
   .btn-fx-primary,
