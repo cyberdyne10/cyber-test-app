@@ -1,0 +1,33 @@
+-- schema.sql
+
+CREATE TABLE IF NOT EXISTS tests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS questions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  test_id INTEGER NOT NULL,
+  text TEXT NOT NULL,
+  FOREIGN KEY (test_id) REFERENCES tests(id)
+);
+
+CREATE TABLE IF NOT EXISTS options (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  question_id INTEGER NOT NULL,
+  text TEXT NOT NULL,
+  is_correct INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY (question_id) REFERENCES questions(id)
+);
+
+CREATE TABLE IF NOT EXISTS attempts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  student_name TEXT NOT NULL,
+  student_id TEXT,
+  test_id INTEGER NOT NULL,
+  score INTEGER NOT NULL,
+  total INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (test_id) REFERENCES tests(id)
+);

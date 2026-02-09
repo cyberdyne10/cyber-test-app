@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Cyber Test – Test</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="p-4">
+  <div class="container">
+    <h1 class="mb-3">Test</h1>
+    <div id="info" class="mb-3"></div>
+    <form id="testForm"></form>
+    <button id="submitBtn" class="btn btn-success mt-3">Submit</button>
+    <div id="result" class="mt-4 h4"></div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const studentName = params.get('name');
+    const studentId = params.get('id');
+    const testId = params.get('test');
+
+    document.getElementById('info').textContent =
+      `Name: ${studentName} ${studentId ? '(' + studentId + ')' : ''}`;
+
+    async function loadQuestions() {
+      const res = await fetch(`/api/tests/${testId}/full`);
+      const questions = await res.json();
+      const form = document.getElementById('testForm');
+
+      questions.forEach((q, idx) => {
+        const div = document.createElement('div');
+        div.className = 'mb-3';
+        const title = document.createElement('h5');
+        title.textContent = (idx + 1) + '. ' + q.text;
+        div.appendChild(title);
+
+        q.options.forEach(o => {
+          const label = document.createElement('label');
+          label.className = 'd-block';
+          const radio = document.createElement('input');
+          radio.type = 'radio';
+          radio.name = 'q_' + q.id;
+          radio.value = o.id;
+          radio.className = 'form-check-input me-2';
+          label.appendChild(radio);
+          label.appendChild(document.createTextNode(o.text));
+          div.appendChild(label);
+        });
+
+        form.appendChild(div);
+      });
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+      const answers = [];
+      document.querySelectorAll('[name^="q_"]').forEach(el => {
+        if (el.checked) {
+          const questionId = el.name.substring(2);
+          answers.push({
+            question_id: parseInt(questionId, 10),
+            option_id: parseInt(el.value, 10)
+          });
+        }
+      });
+
+      if (answers.length === 0) {
+        alert('Answer at least one question.');
+        return;
+      }
+
+      const res = await fetch(`/api/tests/${testId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_name: studentName,
+          student_id: studentId,
+          answers
+        })
+      });
+
+      const data = await res.json();
+      if (data.error) {
+        alert('Error: ' + data.error);
+        return;
+      }
+
+      document.getElementById('result').textContent =
+        `Score: ${data.score} / ${data.total}`;
+      document.getElementById('submitBtn').disabled = true;
+    });
+
+    loadQuestions();
+  </script>
+</body>
+</html>

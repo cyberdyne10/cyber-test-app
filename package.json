@@ -1,0 +1,14 @@
+{
+  "name": "cyber-test-app",
+  "version": "1.0.0",
+  "description": "Computer-based test web application for cyber security students",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "express": "^4.19.2",
+    "sqlite3": "^5.1.7"
+  }
+}
