@@ -425,6 +425,18 @@ textarea.form-control:focus {
   .row-grid {
     grid-template-columns: 1fr;
   }
+  .brand-line {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+  .badge-chip {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.9rem;
+  }
+  .panel-title-inline {
+    font-size: 1rem;
+  }
   .btn-row-stack {
     display: flex;
     flex-direction: column;
