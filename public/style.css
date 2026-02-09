@@ -318,7 +318,9 @@ textarea.form-control:focus {
 /* Small screen adjustments */
 @media (max-width: 768px) {
   body {
-    padding: 1.25rem 0.5rem;
+    padding: 0;
+    margin: 0;
+    overflow-x: hidden;
   }
   .main-shell {
     max-width: 100%;
@@ -330,6 +332,7 @@ textarea.form-control:focus {
     box-shadow: none;
     border-left: none;
     border-right: none;
+    width: 100vw;
   }
   .panel-header {
     flex-direction: column;
