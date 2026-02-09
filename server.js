@@ -141,6 +141,21 @@ app.delete('/api/questions/:questionId', (req, res) => {
   });
 });
 
+// Delete entire test and its questions/options
+app.delete('/api/tests/:testId', (req, res) => {
+  const testId = req.params.testId;
+  db.run('DELETE FROM options WHERE question_id IN (SELECT id FROM questions WHERE test_id = ?)', [testId], err => {
+    if (err) return res.status(500).json({ error: err.message });
+    db.run('DELETE FROM questions WHERE test_id = ?', [testId], err2 => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      db.run('DELETE FROM tests WHERE id = ?', [testId], err3 => {
+        if (err3) return res.status(500).json({ error: err3.message });
+        res.json({ success: true });
+      });
+    });
+  });
+});
+
 // Get test with questions + options
 app.get('/api/tests/:testId/full', (req, res) => {
   const testId = req.params.testId;

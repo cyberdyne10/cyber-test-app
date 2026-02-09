@@ -81,7 +81,10 @@
             <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:0.15em;">Question Bank</h3>
             <div class="mb-3">
               <label class="form-label">Target Test</label>
-              <select id="testsList" class="form-select"></select>
+              <div class="d-flex gap-2">
+                <select id="testsList" class="form-select"></select>
+                <button id="deleteTestBtn" type="button" class="btn btn-fx-danger" style="white-space:nowrap;">Delete Test</button>
+              </div>
             </div>
 
             <div class="mb-3" id="questionList" style="max-height: 240px; overflow-y: auto; border-radius: 12px; border: 1px solid rgba(148,163,184,0.3); padding: 0.5rem 0.75rem; background: rgba(15,23,42,0.85);">
@@ -173,6 +176,8 @@
       const tests = await res.json();
       const list = document.getElementById('testsList');
       list.innerHTML = '';
+      const deleteTestBtn = document.getElementById('deleteTestBtn');
+
       tests.forEach(t => {
         const opt = document.createElement('option');
         opt.value = t.id;
@@ -184,6 +189,15 @@
         await loadQuestionsForTest(tests[0].id);
       }
 
+      deleteTestBtn.onclick = async () => {
+        const currentId = list.value;
+        if (!currentId) return;
+        if (!confirm('Delete this entire test and all its questions?')) return;
+        await fetch(`/api/tests/${currentId}`, { method: 'DELETE' });
+        await loadTests();
+        window.currentQuestionForEdit = null;
+      };
+
       list.addEventListener('change', async () => {
         const id = list.value;
         await loadQuestionsForTest(id);
@@ -193,7 +207,10 @@
       });
     }
 
+    let testIdForQuestions = null;
+
     async function loadQuestionsForTest(testId) {
+      testIdForQuestions = testId;
       const res = await fetch(`/api/tests/${testId}/questions-full`);
       const questions = await res.json();
       const container = document.getElementById('questionList');
@@ -204,13 +221,40 @@
       }
       questions.forEach(q => {
         const item = document.createElement('div');
-        item.className = 'mb-2 question-item';
+        item.className = 'mb-2 question-item d-flex justify-content-between align-items-center';
         item.style.cursor = 'pointer';
         item.style.padding = '0.45rem 0.5rem';
         item.style.borderRadius = '8px';
         item.style.border = '1px solid rgba(30,64,175,0.4)';
         item.style.background = 'rgba(15,23,42,0.95)';
-        item.textContent = q.text;
+
+        const txt = document.createElement('span');
+        txt.textContent = q.text;
+        txt.style.flex = '1';
+        txt.style.marginRight = '0.5rem';
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.textContent = '×';
+        delBtn.style.border = 'none';
+        delBtn.style.borderRadius = '999px';
+        delBtn.style.width = '24px';
+        delBtn.style.height = '24px';
+        delBtn.style.display = 'flex';
+        delBtn.style.alignItems = 'center';
+        delBtn.style.justifyContent = 'center';
+        delBtn.style.fontSize = '16px';
+        delBtn.style.background = 'rgba(248,113,113,0.18)';
+        delBtn.style.color = '#fecaca';
+        delBtn.style.cursor = 'pointer';
+
+        delBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!confirm('Delete this question?')) return;
+          await fetch(`/api/questions/${q.id}`, { method: 'DELETE' });
+          await loadQuestionsForTest(testIdForQuestions);
+        });
+
         item.addEventListener('click', () => {
           // populate editor with selected question
           document.getElementById('questionText').value = q.text;
@@ -225,6 +269,8 @@
           // store current question id + options for update
           window.currentQuestionForEdit = q;
         });
+        item.appendChild(txt);
+        item.appendChild(delBtn);
         container.appendChild(item);
       });
     }
