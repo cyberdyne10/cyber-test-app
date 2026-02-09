@@ -305,6 +305,34 @@ textarea.form-control:focus {
               rgba(15, 23, 42, 0.96);
 }
 
+.review-block {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(31, 41, 55, 0.8);
+  background: rgba(15, 23, 42, 0.95);
+  font-size: 0.9rem;
+}
+
+.review-question {
+  font-weight: 500;
+  margin-bottom: 0.4rem;
+}
+
+.review-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.badge-correct {
+  color: #bbf7d0;
+}
+
+.badge-wrong {
+  color: #fecaca;
+}
+
 /* Admin login */
 .lock-banner {
   padding: 0.9rem 1rem;

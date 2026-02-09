@@ -191,7 +191,7 @@ app.get('/api/tests/:testId/full', (req, res) => {
 // Submit answers and auto-mark
 app.post('/api/tests/:testId/submit', (req, res) => {
   const testId = req.params.testId;
-  const { student_name, student_id, answers } = req.body;
+  const { student_name, student_id, answers } = req.body; 
   // answers: [{question_id, option_id}]
 
   const oIds = answers.map(a => a.option_id);
@@ -201,31 +201,63 @@ app.post('/api/tests/:testId/submit', (req, res) => {
 
   const placeholders = oIds.map(() => '?').join(',');
   db.all(
-    `SELECT id, is_correct FROM options WHERE id IN (${placeholders})`,
+    `SELECT id, question_id, text, is_correct FROM options WHERE id IN (${placeholders})`,
     oIds,
     (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
 
-      const correctMap = {};
-      rows.forEach(r => (correctMap[r.id] = r.is_correct));
+      const optionMap = {};
+      rows.forEach(r => (optionMap[r.id] = r));
 
       let score = 0;
-      answers.forEach(a => {
-        if (correctMap[a.option_id] === 1) score++;
-      });
+      const detailed = [];
 
-      const total = answers.length;
+      const qPlaceholders = answers.map(() => '?').join(',');
+      const qIds = answers.map(a => a.question_id);
 
-      db.run(
-        'INSERT INTO attempts (student_name, student_id, test_id, score, total) VALUES (?, ?, ?, ?, ?)',
-        [student_name, student_id || '', testId, score, total],
-        function (err2) {
-          if (err2) return res.status(500).json({ error: err2.message });
-          res.json({
-            attempt_id: this.lastID,
-            score,
-            total
+      db.all(
+        `SELECT id, text FROM questions WHERE id IN (${qPlaceholders})`,
+        qIds,
+        (errQ, qRows) => {
+          if (errQ) return res.status(500).json({ error: errQ.message });
+          const questionTextMap = {};
+          qRows.forEach(q => (questionTextMap[q.id] = q.text));
+
+          answers.forEach(a => {
+            const selected = optionMap[a.option_id];
+            if (!selected) return;
+            const correct = rows.find(o => o.question_id === selected.question_id && o.is_correct === 1);
+            const isCorrect = selected.is_correct === 1;
+            if (isCorrect) score++;
+            detailed.push({
+              question_id: selected.question_id,
+              question_text: questionTextMap[selected.question_id] || '',
+              selected_option: {
+                id: selected.id,
+                text: selected.text,
+                is_correct: selected.is_correct === 1
+              },
+              correct_option: correct
+                ? { id: correct.id, text: correct.text, is_correct: true }
+                : null
+            });
           });
+
+          const total = answers.length;
+
+          db.run(
+            'INSERT INTO attempts (student_name, student_id, test_id, score, total) VALUES (?, ?, ?, ?, ?)',
+            [student_name, student_id || '', testId, score, total],
+            function (err2) {
+              if (err2) return res.status(500).json({ error: err2.message });
+              res.json({
+                attempt_id: this.lastID,
+                score,
+                total,
+                detailed
+              });
+            }
+          );
         }
       );
     }
