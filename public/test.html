@@ -8,7 +8,11 @@
 <body class="p-4">
   <div class="container">
     <h1 class="mb-3">Test</h1>
-    <div id="info" class="mb-3"></div>
+    <div id="info" class="mb-2"></div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div><strong>Time left:</strong> <span id="timer">--:--</span></div>
+      <div class="text-muted small">(Auto-submit when time runs out)</div>
+    </div>
     <form id="testForm"></form>
     <button id="submitBtn" class="btn btn-success mt-3">Submit</button>
     <div id="result" class="mt-4 h4"></div>
@@ -20,12 +24,27 @@
     const studentId = params.get('id');
     const testId = params.get('test');
 
+    // --- CONFIG: exam duration in minutes ---
+    const EXAM_DURATION_MINUTES = 30; // change this if you want shorter/longer tests
+
     document.getElementById('info').textContent =
       `Name: ${studentName} ${studentId ? '(' + studentId + ')' : ''}`;
 
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
     async function loadQuestions() {
       const res = await fetch(`/api/tests/${testId}/full`);
-      const questions = await res.json();
+      let questions = await res.json();
+
+      // Randomize question order
+      questions = shuffleArray(questions);
+
       const form = document.getElementById('testForm');
 
       questions.forEach((q, idx) => {
@@ -35,7 +54,8 @@
         title.textContent = (idx + 1) + '. ' + q.text;
         div.appendChild(title);
 
-        q.options.forEach(o => {
+        // Randomize options order
+        shuffleArray(q.options).forEach(o => {
           const label = document.createElement('label');
           label.className = 'd-block';
           const radio = document.createElement('input');
@@ -52,7 +72,7 @@
       });
     }
 
-    document.getElementById('submitBtn').addEventListener('click', async () => {
+    async function submitAnswers(auto = false) {
       const answers = [];
       document.querySelectorAll('[name^="q_"]').forEach(el => {
         if (el.checked) {
@@ -64,7 +84,7 @@
         }
       });
 
-      if (answers.length === 0) {
+      if (!auto && answers.length === 0) {
         alert('Answer at least one question.');
         return;
       }
@@ -88,9 +108,43 @@
       document.getElementById('result').textContent =
         `Score: ${data.score} / ${data.total}`;
       document.getElementById('submitBtn').disabled = true;
-    });
 
-    loadQuestions();
+      // Stop timer on submit
+      if (window._timerInterval) {
+        clearInterval(window._timerInterval);
+      }
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', () => submitAnswers(false));
+
+    function startTimer() {
+      const totalSeconds = EXAM_DURATION_MINUTES * 60;
+      let remaining = totalSeconds;
+      const timerEl = document.getElementById('timer');
+
+      function render() {
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        timerEl.textContent = `${m.toString().padStart(2, '0')}:${s
+          .toString()
+          .padStart(2, '0')}`;
+      }
+
+      render();
+      window._timerInterval = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(window._timerInterval);
+          timerEl.textContent = '00:00';
+          // Auto-submit when time runs out
+          submitAnswers(true);
+        } else {
+          render();
+        }
+      }, 1000);
+    }
+
+    loadQuestions().then(startTimer);
   </script>
 </body>
 </html>

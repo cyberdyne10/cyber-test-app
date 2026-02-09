@@ -9,58 +9,92 @@
   <div class="container">
     <h1 class="mb-4">Teacher / Admin Panel</h1>
 
-    <h3>Create Test</h3>
-    <div class="mb-3">
-      <input id="testName" class="form-control" placeholder="Test name (e.g. Network Security 101)" />
+    <!-- Simple admin auth (front-end only) -->
+    <div id="loginSection" class="mb-4">
+      <p class="mb-2">This area is restricted to the teacher.</p>
+      <div class="mb-2">
+        <label class="form-label">Admin Password</label>
+        <input type="password" id="adminPassword" class="form-control" />
+      </div>
+      <button id="loginBtn" class="btn btn-primary">Login</button>
+      <div id="loginError" class="text-danger mt-2" style="display:none;">Incorrect password.</div>
+      <hr class="mt-4" />
     </div>
-    <div class="mb-3">
-      <textarea id="testDesc" class="form-control" placeholder="Description"></textarea>
-    </div>
-    <button id="createTestBtn" class="btn btn-primary mb-4">Create Test</button>
 
-    <h3>Tests</h3>
-    <select id="testsList" class="form-select mb-3"></select>
+    <div id="adminContent" style="display:none;">
+      <h3>Create Test</h3>
+      <div class="mb-3">
+        <input id="testName" class="form-control" placeholder="Test name (e.g. Network Security 101)" />
+      </div>
+      <div class="mb-3">
+        <textarea id="testDesc" class="form-control" placeholder="Description"></textarea>
+      </div>
+      <button id="createTestBtn" class="btn btn-primary mb-4">Create Test</button>
 
-    <h4>Add Question</h4>
-    <div class="mb-2">
-      <textarea id="questionText" class="form-control" placeholder="Question text"></textarea>
-    </div>
-    <div class="mb-2">
-      <input id="opt1" class="form-control mb-1" placeholder="Option 1" />
-      <input id="opt2" class="form-control mb-1" placeholder="Option 2" />
-      <input id="opt3" class="form-control mb-1" placeholder="Option 3" />
-      <input id="opt4" class="form-control mb-1" placeholder="Option 4" />
-    </div>
-    <div class="mb-2">
-      <label>Correct Option:</label>
-      <select id="correctOpt" class="form-select">
-        <option value="1">Option 1</option>
-        <option value="2">Option 2</option>
-        <option value="3">Option 3</option>
-        <option value="4">Option 4</option>
-      </select>
-    </div>
-    <button id="addQuestionBtn" class="btn btn-success mb-4">Add Question</button>
+      <h3>Tests</h3>
+      <select id="testsList" class="form-select mb-3"></select>
 
-    <h3>Recent Attempts</h3>
-    <table class="table table-bordered">
-      <thead>
-        <tr>
-          <th>Student</th>
-          <th>Student ID</th>
-          <th>Test</th>
-          <th>Score</th>
-          <th>Total</th>
-          <th>Time</th>
-        </tr>
-      </thead>
-      <tbody id="attemptsBody"></tbody>
-    </table>
+      <h4>Add Question</h4>
+      <div class="mb-2">
+        <textarea id="questionText" class="form-control" placeholder="Question text"></textarea>
+      </div>
+      <div class="mb-2">
+        <input id="opt1" class="form-control mb-1" placeholder="Option 1" />
+        <input id="opt2" class="form-control mb-1" placeholder="Option 2" />
+        <input id="opt3" class="form-control mb-1" placeholder="Option 3" />
+        <input id="opt4" class="form-control mb-1" placeholder="Option 4" />
+      </div>
+      <div class="mb-2">
+        <label>Correct Option:</label>
+        <select id="correctOpt" class="form-select">
+          <option value="1">Option 1</option>
+          <option value="2">Option 2</option>
+          <option value="3">Option 3</option>
+          <option value="4">Option 4</option>
+        </select>
+      </div>
+      <button id="addQuestionBtn" class="btn btn-success mb-4">Add Question</button>
 
-    <a href="index.html">Back to Student Portal</a>
+      <h3>Recent Attempts</h3>
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Student ID</th>
+            <th>Test</th>
+            <th>Score</th>
+            <th>Total</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody id="attemptsBody"></tbody>
+      </table>
+
+      <a href="index.html">Back to Student Portal</a>
+    </div>
   </div>
 
   <script>
+    // Simple admin password (front-end only). Change this value to whatever you want.
+    const ADMIN_PASSWORD = 'CyberAdmin2025!';
+
+    const loginSection = document.getElementById('loginSection');
+    const adminContent = document.getElementById('adminContent');
+    const loginError = document.getElementById('loginError');
+    const loginBtn = document.getElementById('loginBtn');
+
+    loginBtn.addEventListener('click', () => {
+      const entered = document.getElementById('adminPassword').value;
+      if (entered === ADMIN_PASSWORD) {
+        loginSection.style.display = 'none';
+        adminContent.style.display = 'block';
+        loginError.style.display = 'none';
+        initAdmin();
+      } else {
+        loginError.style.display = 'block';
+      }
+    });
+
     async function loadTests() {
       const res = await fetch('/api/tests');
       const tests = await res.json();
@@ -93,58 +127,60 @@
       });
     }
 
-    document.getElementById('createTestBtn').addEventListener('click', async () => {
-      const name = document.getElementById('testName').value.trim();
-      const desc = document.getElementById('testDesc').value.trim();
-      if (!name) {
-        alert('Enter test name');
-        return;
-      }
-      await fetch('/api/tests', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ name, description: desc })
-      });
-      document.getElementById('testName').value = '';
-      document.getElementById('testDesc').value = '';
-      await loadTests();
-      alert('Test created');
-    });
-
-    document.getElementById('addQuestionBtn').addEventListener('click', async () => {
-      const testId = document.getElementById('testsList').value;
-      const qText = document.getElementById('questionText').value.trim();
-      if (!qText) {
-        alert('Enter question text');
-        return;
-      }
-      const opts = [
-        document.getElementById('opt1').value.trim(),
-        document.getElementById('opt2').value.trim(),
-        document.getElementById('opt3').value.trim(),
-        document.getElementById('opt4').value.trim()
-      ];
-      const correct = parseInt(document.getElementById('correctOpt').value, 10) - 1;
-
-      const options = opts.map((t, idx) => ({
-        text: t,
-        is_correct: idx === correct
-      }));
-
-      await fetch(`/api/tests/${testId}/questions`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ text: qText, options })
+    function initAdmin() {
+      document.getElementById('createTestBtn').addEventListener('click', async () => {
+        const name = document.getElementById('testName').value.trim();
+        const desc = document.getElementById('testDesc').value.trim();
+        if (!name) {
+          alert('Enter test name');
+          return;
+        }
+        await fetch('/api/tests', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ name, description: desc })
+        });
+        document.getElementById('testName').value = '';
+        document.getElementById('testDesc').value = '';
+        await loadTests();
+        alert('Test created');
       });
 
-      document.getElementById('questionText').value = '';
-      ['opt1','opt2','opt3','opt4'].forEach(id => document.getElementById(id).value = '');
-      alert('Question added');
-    });
+      document.getElementById('addQuestionBtn').addEventListener('click', async () => {
+        const testId = document.getElementById('testsList').value;
+        const qText = document.getElementById('questionText').value.trim();
+        if (!qText) {
+          alert('Enter question text');
+          return;
+        }
+        const opts = [
+          document.getElementById('opt1').value.trim(),
+          document.getElementById('opt2').value.trim(),
+          document.getElementById('opt3').value.trim(),
+          document.getElementById('opt4').value.trim()
+        ];
+        const correct = parseInt(document.getElementById('correctOpt').value, 10) - 1;
 
-    loadTests();
-    loadAttempts();
-    setInterval(loadAttempts, 10000);
+        const options = opts.map((t, idx) => ({
+          text: t,
+          is_correct: idx === correct
+        }));
+
+        await fetch(`/api/tests/${testId}/questions`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ text: qText, options })
+        });
+
+        document.getElementById('questionText').value = '';
+        ['opt1','opt2','opt3','opt4'].forEach(id => document.getElementById(id).value = '');
+        alert('Question added');
+      });
+
+      loadTests();
+      loadAttempts();
+      setInterval(loadAttempts, 10000);
+    }
   </script>
 </body>
 </html>
