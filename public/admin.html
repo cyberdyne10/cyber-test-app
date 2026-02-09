@@ -83,6 +83,11 @@
               <label class="form-label">Target Test</label>
               <select id="testsList" class="form-select"></select>
             </div>
+
+            <div class="mb-3" id="questionList" style="max-height: 240px; overflow-y: auto; border-radius: 12px; border: 1px solid rgba(148,163,184,0.3); padding: 0.5rem 0.75rem; background: rgba(15,23,42,0.85);">
+              <div class="text-muted" style="font-size:0.8rem;">Questions for this test will appear here. Tap one to edit.</div>
+            </div>
+
             <div class="mb-2">
               <label class="form-label">Question Text</label>
               <textarea id="questionText" class="form-control" placeholder="Type the full question"></textarea>
@@ -173,6 +178,54 @@
         opt.value = t.id;
         opt.textContent = t.name;
         list.appendChild(opt);
+      });
+
+      if (tests.length) {
+        await loadQuestionsForTest(tests[0].id);
+      }
+
+      list.addEventListener('change', async () => {
+        const id = list.value;
+        await loadQuestionsForTest(id);
+        window.currentQuestionForEdit = null;
+        document.getElementById('questionText').value = '';
+        ['opt1','opt2','opt3','opt4'].forEach(id => document.getElementById(id).value = '');
+      });
+    }
+
+    async function loadQuestionsForTest(testId) {
+      const res = await fetch(`/api/tests/${testId}/questions-full`);
+      const questions = await res.json();
+      const container = document.getElementById('questionList');
+      container.innerHTML = '';
+      if (!questions.length) {
+        container.innerHTML = '<div class="text-muted" style="font-size:0.8rem;">No questions yet for this test.</div>';
+        return;
+      }
+      questions.forEach(q => {
+        const item = document.createElement('div');
+        item.className = 'mb-2 question-item';
+        item.style.cursor = 'pointer';
+        item.style.padding = '0.45rem 0.5rem';
+        item.style.borderRadius = '8px';
+        item.style.border = '1px solid rgba(30,64,175,0.4)';
+        item.style.background = 'rgba(15,23,42,0.95)';
+        item.textContent = q.text;
+        item.addEventListener('click', () => {
+          // populate editor with selected question
+          document.getElementById('questionText').value = q.text;
+          document.getElementById('opt1').value = q.options[0]?.text || '';
+          document.getElementById('opt2').value = q.options[1]?.text || '';
+          document.getElementById('opt3').value = q.options[2]?.text || '';
+          document.getElementById('opt4').value = q.options[3]?.text || '';
+          const correctIndex = q.options.findIndex(o => o.is_correct);
+          if (correctIndex >= 0) {
+            document.getElementById('correctOpt').value = (correctIndex + 1).toString();
+          }
+          // store current question id + options for update
+          window.currentQuestionForEdit = q;
+        });
+        container.appendChild(item);
       });
     }
 

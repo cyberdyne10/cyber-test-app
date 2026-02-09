@@ -73,6 +73,74 @@ app.post('/api/tests/:testId/questions', (req, res) => {
  * STUDENT ROUTES
  */
 
+// Get raw questions + options for admin editing
+app.get('/api/tests/:testId/questions-full', (req, res) => {
+  const testId = req.params.testId;
+  db.all(
+    `SELECT q.id as question_id, q.text as question_text,
+            o.id as option_id, o.text as option_text, o.is_correct
+     FROM questions q
+     JOIN options o ON q.id = o.question_id
+     WHERE q.test_id = ?
+     ORDER BY q.id ASC, o.id ASC`,
+    [testId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      const questions = {};
+      rows.forEach(r => {
+        if (!questions[r.question_id]) {
+          questions[r.question_id] = {
+            id: r.question_id,
+            text: r.question_text,
+            options: []
+          };
+        }
+        questions[r.question_id].options.push({
+          id: r.option_id,
+          text: r.option_text,
+          is_correct: r.is_correct === 1
+        });
+      });
+      res.json(Object.values(questions));
+    }
+  );
+});
+
+// Update question text and options
+app.post('/api/questions/:questionId/update', (req, res) => {
+  const questionId = req.params.questionId;
+  const { text, options } = req.body; // options: [{id, text, is_correct}]
+
+  db.run(
+    'UPDATE questions SET text = ? WHERE id = ?',
+    [text, questionId],
+    err => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      const stmt = db.prepare('UPDATE options SET text = ?, is_correct = ? WHERE id = ?');
+      for (const opt of options) {
+        stmt.run(opt.text, opt.is_correct ? 1 : 0, opt.id);
+      }
+      stmt.finalize(err2 => {
+        if (err2) return res.status(500).json({ error: err2.message });
+        res.json({ success: true });
+      });
+    }
+  );
+});
+
+// Delete question and its options
+app.delete('/api/questions/:questionId', (req, res) => {
+  const questionId = req.params.questionId;
+  db.run('DELETE FROM options WHERE question_id = ?', [questionId], err => {
+    if (err) return res.status(500).json({ error: err.message });
+    db.run('DELETE FROM questions WHERE id = ?', [questionId], err2 => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ success: true });
+    });
+  });
+});
+
 // Get test with questions + options
 app.get('/api/tests/:testId/full', (req, res) => {
   const testId = req.params.testId;
