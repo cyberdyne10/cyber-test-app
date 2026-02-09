@@ -4,73 +4,118 @@
   <meta charset="UTF-8">
   <title>Cyber Test – Admin</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="style.css">
 </head>
-<body class="p-4">
-  <div class="container">
-    <h1 class="mb-4">Teacher / Admin Panel</h1>
+<body>
+  <div class="main-shell">
+    <div class="futuristic-orb"></div>
 
-    <!-- Simple admin auth (front-end only) -->
-    <div id="loginSection" class="mb-4">
-      <p class="mb-2">This area is restricted to the teacher.</p>
-      <div class="mb-2">
-        <label class="form-label">Admin Password</label>
-        <input type="password" id="adminPassword" class="form-control" />
+    <div class="panel-glass">
+      <div class="panel-header">
+        <div>
+          <div class="badge-chip">Teacher Console</div>
+          <div class="panel-title mt-2">
+            <span>Assessment</span><span class="accent">Control Room</span>
+          </div>
+          <div class="panel-subtitle">Define tests, seed question banks, and monitor student performance.</div>
+        </div>
+        <div class="text-end d-none d-md-block">
+          <div class="info-chip">
+            <span class="label">Visibility</span>
+            <span class="value">Instructor Only</span>
+          </div>
+        </div>
       </div>
-      <button id="loginBtn" class="btn btn-primary">Login</button>
-      <div id="loginError" class="text-danger mt-2" style="display:none;">Incorrect password.</div>
-      <hr class="mt-4" />
-    </div>
 
-    <div id="adminContent" style="display:none;">
-      <h3>Create Test</h3>
-      <div class="mb-3">
-        <input id="testName" class="form-control" placeholder="Test name (e.g. Network Security 101)" />
+      <!-- Simple admin auth (front-end only) -->
+      <div id="loginSection" class="mb-4">
+        <div class="lock-banner mb-3">
+          <strong>Secure Area.</strong> Only the instructor should know the access phrase.
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Admin Access Phrase</label>
+          <input type="password" id="adminPassword" class="form-control" placeholder="Enter instructor phrase" />
+        </div>
+        <button id="loginBtn" class="btn btn-fx-primary mt-2">
+          <span class="pulse-dot"></span>
+          <span>Unlock Console</span>
+        </button>
+        <div id="loginError" class="text-danger mt-2" style="display:none; font-size:0.85rem;">Incorrect phrase. Try again.</div>
+        <hr class="section-divider" />
       </div>
-      <div class="mb-3">
-        <textarea id="testDesc" class="form-control" placeholder="Description"></textarea>
-      </div>
-      <button id="createTestBtn" class="btn btn-primary mb-4">Create Test</button>
 
-      <h3>Tests</h3>
-      <select id="testsList" class="form-select mb-3"></select>
+      <div id="adminContent" style="display:none;">
+        <div class="row-grid mb-4">
+          <div>
+            <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:0.15em;">Create Test</h3>
+            <div class="mb-3">
+              <label class="form-label">Test Name</label>
+              <input id="testName" class="form-control" placeholder="e.g. Network Security 101" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Description</label>
+              <textarea id="testDesc" class="form-control" placeholder="Short summary"></textarea>
+            </div>
+            <button id="createTestBtn" class="btn btn-fx-primary mb-4">
+              <span class="pulse-dot"></span>
+              <span>Create Test</span>
+            </button>
+          </div>
 
-      <h4>Add Question</h4>
-      <div class="mb-2">
-        <textarea id="questionText" class="form-control" placeholder="Question text"></textarea>
-      </div>
-      <div class="mb-2">
-        <input id="opt1" class="form-control mb-1" placeholder="Option 1" />
-        <input id="opt2" class="form-control mb-1" placeholder="Option 2" />
-        <input id="opt3" class="form-control mb-1" placeholder="Option 3" />
-        <input id="opt4" class="form-control mb-1" placeholder="Option 4" />
-      </div>
-      <div class="mb-2">
-        <label>Correct Option:</label>
-        <select id="correctOpt" class="form-select">
-          <option value="1">Option 1</option>
-          <option value="2">Option 2</option>
-          <option value="3">Option 3</option>
-          <option value="4">Option 4</option>
-        </select>
-      </div>
-      <button id="addQuestionBtn" class="btn btn-success mb-4">Add Question</button>
+          <div>
+            <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:0.15em;">Question Bank</h3>
+            <div class="mb-3">
+              <label class="form-label">Target Test</label>
+              <select id="testsList" class="form-select"></select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Question Text</label>
+              <textarea id="questionText" class="form-control" placeholder="Type the full question"></textarea>
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Options</label>
+              <input id="opt1" class="form-control mb-1" placeholder="Option 1" />
+              <input id="opt2" class="form-control mb-1" placeholder="Option 2" />
+              <input id="opt3" class="form-control mb-1" placeholder="Option 3" />
+              <input id="opt4" class="form-control mb-1" placeholder="Option 4" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Correct Option</label>
+              <select id="correctOpt" class="form-select">
+                <option value="1">Option 1</option>
+                <option value="2">Option 2</option>
+                <option value="3">Option 3</option>
+                <option value="4">Option 4</option>
+              </select>
+            </div>
+            <button id="addQuestionBtn" class="btn btn-fx-secondary mb-4">Add Question</button>
+          </div>
+        </div>
 
-      <h3>Recent Attempts</h3>
-      <table class="table table-bordered">
-        <thead>
-          <tr>
-            <th>Student</th>
-            <th>Student ID</th>
-            <th>Test</th>
-            <th>Score</th>
-            <th>Total</th>
-            <th>Time</th>
-          </tr>
-        </thead>
-        <tbody id="attemptsBody"></tbody>
-      </table>
+        <hr class="section-divider" />
 
-      <a href="index.html">Back to Student Portal</a>
+        <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:0.15em;">Recent Attempts</h3>
+        <div class="table-responsive">
+          <table class="table table-dark table-borderless align-middle" style="background:transparent;">
+            <thead style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.16em; color:#9ca3af;">
+              <tr>
+                <th>Student</th>
+                <th>Student ID</th>
+                <th>Test</th>
+                <th>Score</th>
+                <th>Total</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody id="attemptsBody" style="font-size:0.85rem;"></tbody>
+          </table>
+        </div>
+
+        <div class="mt-3 d-flex justify-content-between align-items-center">
+          <a href="index.html" class="btn btn-fx-secondary">Back to Student View</a>
+          <small class="text-muted">Table refreshes every 10 seconds.</small>
+        </div>
+      </div>
     </div>
   </div>
 

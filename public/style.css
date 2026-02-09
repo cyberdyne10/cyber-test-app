@@ -1,0 +1,326 @@
+/* Global futuristic UI/UX styling */
+
+:root {
+  --bg-gradient: radial-gradient(circle at top left, #1f2937, #020617);
+  --card-bg: rgba(15, 23, 42, 0.85);
+  --card-border: rgba(148, 163, 184, 0.3);
+  --accent: #38bdf8;
+  --accent-soft: rgba(56, 189, 248, 0.25);
+  --accent-strong: #0ea5e9;
+  --danger: #f97373;
+  --text-main: #e5e7eb;
+  --text-muted: #9ca3af;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 3rem 1rem;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  background: radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.18), transparent 55%),
+              radial-gradient(circle at 100% 100%, rgba(129, 140, 248, 0.18), transparent 55%),
+              #020617;
+  color: var(--text-main);
+}
+
+.main-shell {
+  max-width: 960px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* Glowing orb background */
+.futuristic-orb {
+  position: absolute;
+  inset: -80px;
+  pointer-events: none;
+  opacity: 0.6;
+  mix-blend-mode: screen;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.22), transparent 55%),
+    radial-gradient(circle at 80% 0%, rgba(236, 72, 153, 0.20), transparent 50%),
+    radial-gradient(circle at 0% 100%, rgba(52, 211, 153, 0.18), transparent 55%);
+  filter: blur(4px);
+  z-index: 0;
+}
+
+/* Glass panels */
+.panel-glass {
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.85));
+  border-radius: 20px;
+  border: 1px solid var(--card-border);
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.9),
+    0 0 0 1px rgba(148, 163, 184, 0.1);
+  padding: 2.25rem 2rem;
+  backdrop-filter: blur(26px) saturate(140%);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.panel-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.panel-title span.accent {
+  color: var(--accent);
+}
+
+.panel-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.badge-chip {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 50%);
+}
+
+/* Futuristic form controls */
+.form-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.form-control,
+.form-select,
+textarea.form-control {
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: var(--text-main);
+  font-size: 0.9rem;
+  padding: 0.6rem 0.8rem;
+}
+
+.form-control:focus,
+.form-select:focus,
+textarea.form-control:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.45), 0 0 0 8px rgba(56, 189, 248, 0.12);
+}
+
+/* Buttons */
+.btn-fx-primary,
+.btn-fx-secondary,
+.btn-fx-danger {
+  position: relative;
+  border-radius: 999px !important;
+  border: none;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  padding: 0.65rem 1.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-fx-primary {
+  background: radial-gradient(circle at 0% 0%, #38bdf8, #0f766e);
+  color: #0b1120;
+  box-shadow:
+    0 0 0 1px rgba(56, 189, 248, 0.6),
+    0 18px 40px rgba(56, 189, 248, 0.32);
+}
+
+.btn-fx-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.25), transparent 55%);
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+.btn-fx-primary:hover::after {
+  opacity: 1;
+}
+
+.btn-fx-secondary {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.8));
+  color: var(--text-main);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+}
+
+.btn-fx-danger {
+  background: radial-gradient(circle at 0% 0%, #f97373, #b91c1c);
+  color: #fee2e2;
+}
+
+.btn-fx-primary span.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #0f172a;
+  box-shadow: 0 0 14px rgba(15, 23, 42, 0.9);
+}
+
+/* Divider */
+.section-divider {
+  margin: 1.75rem 0;
+  border-top: 1px dashed rgba(148, 163, 184, 0.35);
+}
+
+/* Card rows */
+.row-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.info-chip {
+  padding: 0.7rem 0.8rem;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.18), transparent 55%),
+              rgba(15, 23, 42, 0.9);
+  font-size: 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-chip span.label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.info-chip span.value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Timer styling */
+.timer-large {
+  font-family: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 1.4rem;
+  letter-spacing: 0.18em;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  background: radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.18), transparent 55%),
+              rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.85);
+}
+
+.timer-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+}
+
+/* Questions */
+.question-block {
+  padding: 1.1rem 1.1rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.85));
+  border: 1px solid rgba(31, 41, 55, 0.9);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.7);
+}
+
+.question-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
+}
+
+.question-index {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+}
+
+.question-text {
+  font-size: 0.96rem;
+}
+
+.option-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 41, 55, 0.9);
+  background: rgba(15, 23, 42, 0.9);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.option-pill:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.15), transparent 55%),
+              rgba(15, 23, 42, 0.98);
+}
+
+.option-pill input[type="radio"] {
+  accent-color: var(--accent-strong);
+}
+
+.option-key {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+}
+
+/* Result text */
+.result-banner {
+  margin-top: 1.5rem;
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.22), transparent 55%),
+              rgba(15, 23, 42, 0.96);
+}
+
+/* Admin login */
+.lock-banner {
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px dashed rgba(148, 163, 184, 0.5);
+  background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.18), transparent 60%),
+              rgba(15, 23, 42, 0.9);
+  font-size: 0.85rem;
+}
+
+/* Small screen adjustments */
+@media (max-width: 640px) {
+  body {
+    padding: 1.75rem 1rem;
+  }
+  .panel-glass {
+    padding: 1.5rem 1.25rem;
+  }
+}

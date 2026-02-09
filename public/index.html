@@ -4,30 +4,60 @@
   <meta charset="UTF-8">
   <title>Cyber Test – Student</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="style.css">
 </head>
-<body class="p-4">
-  <div class="container">
-    <h1 class="mb-4">Cyber Security Test Portal</h1>
+<body>
+  <div class="main-shell">
+    <div class="futuristic-orb"></div>
 
-    <div class="mb-3">
-      <label class="form-label">Student Name</label>
-      <input id="studentName" class="form-control" />
+    <div class="panel-glass">
+      <div class="panel-header">
+        <div>
+          <div class="badge-chip">Cyber Test System</div>
+          <div class="panel-title mt-2">
+            <span>Student</span><span class="accent">Exam Console</span>
+          </div>
+          <div class="panel-subtitle">Secure, randomized assessments for cyber security students.</div>
+        </div>
+        <div class="text-end d-none d-md-block">
+          <div class="info-chip">
+            <span class="label">Mode</span>
+            <span class="value">CBT · v1.0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="row-grid mb-3">
+        <div>
+          <div class="mb-3">
+            <label class="form-label">Student Name</label>
+            <input id="studentName" class="form-control" placeholder="e.g. Ada Lovelace" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Student ID (optional)</label>
+            <input id="studentId" class="form-control" placeholder="e.g. SEC-2025-042" />
+          </div>
+        </div>
+        <div>
+          <div class="mb-3">
+            <label class="form-label">Select Test</label>
+            <select id="testSelect" class="form-select"></select>
+          </div>
+          <div class="info-chip">
+            <span class="label">Integrity</span>
+            <span class="value">Randomized questions & options</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <button id="startBtn" class="btn btn-fx-primary">
+          <span class="pulse-dot"></span>
+          <span>Start Secure Session</span>
+        </button>
+        <a href="admin.html" class="btn btn-fx-secondary">Teacher Console</a>
+      </div>
     </div>
-    <div class="mb-3">
-      <label class="form-label">Student ID (optional)</label>
-      <input id="studentId" class="form-control" />
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Select Test</label>
-      <select id="testSelect" class="form-select"></select>
-    </div>
-
-    <button id="startBtn" class="btn btn-primary">Start Test</button>
-
-    <hr class="my-4">
-
-    <a href="admin.html">Teacher / Admin Panel</a>
   </div>
 
   <script>
@@ -36,6 +66,14 @@
       const tests = await res.json();
       const sel = document.getElementById('testSelect');
       sel.innerHTML = '';
+      if (!tests.length) {
+        const opt = document.createElement('option');
+        opt.textContent = 'No tests configured yet';
+        opt.disabled = true;
+        opt.selected = true;
+        sel.appendChild(opt);
+        return;
+      }
       tests.forEach(t => {
         const opt = document.createElement('option');
         opt.value = t.id;
@@ -51,7 +89,12 @@
         return;
       }
       const studentId = document.getElementById('studentId').value.trim();
-      const testId = document.getElementById('testSelect').value;
+      const testSelect = document.getElementById('testSelect');
+      if (!testSelect.value) {
+        alert('Select a test');
+        return;
+      }
+      const testId = testSelect.value;
       const params = new URLSearchParams({
         name,
         id: studentId,
