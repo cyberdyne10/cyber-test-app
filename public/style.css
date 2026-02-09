@@ -102,9 +102,6 @@ body::before {
 
 .brand-logo {
   height: 40px;
-  border-radius: 12px;
-  background: #020617;
-  padding: 4px;
 }
 
 .panel-title-inline {
