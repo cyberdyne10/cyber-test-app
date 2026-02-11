@@ -1,0 +1,50 @@
+Application Security – Set 1,
+1,What is the main goal of application security?,Protect applications from vulnerabilities and attacks,Increase application color depth,Improve screen resolution,Change IP addresses,1
+1,Which type of flaw allows an attacker to inject SQL commands into an application?,SQL injection,Cross-site scripting (XSS),Buffer overflow,Command injection,1
+1,Which input handling practice helps prevent injection attacks?,Input validation and parameterized queries,Blindly concatenating user input,Disabling error messages,Using only GET requests,1
+1,What does XSS stand for?,Cross-Site Scripting,Cross-System Security,Extended Software Safety,External Site Spoofing,1
+1,Which type of XSS occurs when malicious script is stored on the server and served to many users?,Stored XSS,Reflected XSS,DOM-based XSS,Blind XSS,1
+1,In secure coding, what is the principle of "fail secure"?,Systems should default to a safe state on error,Systems should ignore all errors,Systems should never log errors,Systems should expose stack traces,1
+1,Why should error messages shown to users be generic?,To avoid leaking sensitive internal details,To confuse developers,To increase CPU usage,To reduce disk space,1
+1,What does CSRF stand for?,Cross-Site Request Forgery,Central System Resource Filter,Cloud Security Risk Framework,Client-Side Routing Function,1
+1,Which defense helps prevent CSRF attacks?,CSRF tokens in forms and headers,Using HTTP instead of HTTPS,Disabling cookies,Allowing open redirects,1
+1,Why is using HTTPS important for web applications?,It encrypts traffic between client and server,It compresses images only,It changes DNS records,It increases screen brightness,1
+1,What is input validation primarily used to prevent?,Injection and malformed data attacks,High CPU usage,Slow networks,Extra logging,1
+1,Which principle says a user or component should have only the access needed to perform its function?,Least privilege,High availability,Open by default,Single point of failure,1
+1,What is the purpose of output encoding in web apps?,To prevent script execution in browsers,To speed up rendering,To change fonts,To compress CSS,1
+1,What is an API key used for?,Identify and authorize API clients,Compress JSON,Change IP addresses,Encrypt disks,1
+1,Why should hard-coded secrets in application code be avoided?,They can be exposed in repositories and builds,They increase performance,They speed up compilation,They reduce memory,1
+1,What is a secure alternative to hard-coding secrets?,Store in a secrets manager or environment variables,Save in public Git repositories,Embed in HTML,Print on logs,1
+1,Which testing technique uses malicious input to break apps?,Fuzz testing,Unit testing,Integration testing,Regression testing,1
+1,What is the purpose of secure code review?,Identify security weaknesses in source code,Improve UI colors,Reduce line count,Change coding language,1
+1,Which document describes common web app risks like injection and XSS?,OWASP Top 10,ISO 27001,PCI DSS,GDPR,1
+1,Why is session timeout important for web applications?,Reduces risk when users forget to log out,Improves color depth,Increases storage,Changes TLS version,1
+1,What is session fixation?,Forcing a user to use a known session ID,Deleting all sessions randomly,Using many cookies,Changing passwords,1
+1,Which attribute helps protect cookies from being accessed by scripts?,HttpOnly attribute,Secure attribute,Max-Age attribute,Domain attribute,1
+1,Which attribute ensures cookies are only sent over HTTPS?,Secure attribute,SameSite attribute,Path attribute,HttpOnly attribute,1
+1,What is an open redirect vulnerability?,Application redirects user to arbitrary attacker-controlled URLs,Firewall opening all ports,Switch misconfiguration,DNS timeout,1
+1,Why is file upload handling critical in web security?,Uploaded files may contain malware or scripts,Uploads always compress data,Uploads clean logs,Uploads fix bugs,1
+1,Which practice helps secure file uploads?,Validate file type and store outside web root,Allow any file in web root,Execute uploaded files,Disable antivirus,1
+1,What is the goal of code signing for applications?,Ensure integrity and authenticity of software,Reduce file size,Improve colors,Change license,1
+1,Which practice reduces risk when using third-party libraries?,Keep them updated and use trusted sources,Download from unknown forums,Modify signatures,Ignore vulnerabilities,1
+1,Why should default admin interfaces be renamed or protected?,They are commonly targeted by attackers,They slow apps,They reduce logging,They change uptime,1
+1,What is rate limiting used for in APIs?,Control request volume to reduce abuse,Increase latency,Disable logging,Encrypt responses,1
+1,What is the primary risk of insecure direct object references (IDOR)?,Users can access data they are not authorized to see,Applications run slower,Backups fail,Passwords expire,1
+1,What is the purpose of CAPTCHA in web applications?,Distinguish humans from automated bots,Encrypt data,Change CSS,Manage IP addresses,1
+1,Why is logging and monitoring important for application security?,Detecting attacks and troubleshooting incidents,Reducing CPU,Changing UI,Disabling firewalls,1
+1,What should be done before deploying major application changes?,Security testing and review,Skip all testing,Disable backups,Change all ports,1
+1,Why should plaintext passwords never be stored in databases?,If compromised, all user accounts are exposed,It increases performance,It reduces complexity,It improves UX,1
+1,Which is a secure way to store passwords?,Salted one-way hashing,Plaintext,Base64 only,Symmetric decryption on client,1
+1,What is dependency scanning?,Checking third-party libraries for known vulnerabilities,Scanning only CSS,Checking printers,Measuring latency,1
+1,Why is secure configuration management important?,Prevents insecure defaults and misconfigurations,Increases cost only,Reduces monitoring,Disables encryption,1
+1,What is "principle of security by design"?,Build security into the design from the start,Add security only at the end,Ignore security,Let users handle security,1
+1,Which environment should be used for testing insecure scenarios safely?,Isolated test/staging environment,Production,Public Wi‑Fi,Random user devices,1
+1,Why should verbose stack traces not be shown to end users?,They may reveal internal paths and logic,They look ugly,They slow servers,They use RAM,1
+1,What is a common measure to protect REST APIs?,Use authentication, authorization, and TLS,Expose them without auth,Use HTTP only,Disable logging,1
+1,Why is security training for developers important?,Prevents common coding mistakes leading to vulnerabilities,Reduces compile time,Improves marketing,Controls HR,1
+1,What is application whitelisting on a server?,Allow only specific approved apps to run,Block all apps,Allow all apps,Allow random apps daily,1
+1,Why should debug features be disabled in production?,They may expose sensitive information and controls,They improve speed,They reduce RAM,They fix bugs automatically,1
+1,What is "input sanitization"?,Cleaning and shaping input to safe formats,Deleting all input,Encrypting input only,Ignoring input,1
+1,Why is consistent error handling important?,Prevents leaking sensitive info and improves UX,Decreases uptime,Changes IP address,Improves Wi‑Fi,1
+1,What is an API gateway useful for?,Centralizing auth, rate limiting, and logging for APIs,Replacing all routers,Changing IP schemes,Encrypting disks,1
+1,Why is cross-origin resource sharing (CORS) configuration important?,Controls which origins can access resources,Sets DNS names,Changes VLANs,Controls power usage,1

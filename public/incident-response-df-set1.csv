@@ -1,0 +1,47 @@
+Incident Response & Digital Forensics – Set 1,
+1,What is the primary goal of incident response?,Contain and manage security incidents effectively,Increase bandwidth,Change IP addresses,Upgrade hardware,1
+1,Which phase comes first in a typical incident response lifecycle?,Preparation,Eradication,Recovery,Lessons learned,1
+1,During which phase do you remove malicious artifacts and close vulnerabilities?,Eradication,Detection,Preparation,Lessons learned,1
+1,What is the main goal of the containment phase?,Limit the spread and impact of an incident,Identify root cause only,Improve bandwidth,Backup data,1
+1,Why is a documented incident response plan important?,Provides clear steps and roles during incidents,Reduces hardware costs only,Improves UI design,Controls marketing,1
+1,Which team is primarily responsible for handling security incidents?,Incident Response Team (IRT/CSIRT),Marketing team,Facilities team,Sales team,1
+1,What is the first action when a potential incident is reported?,Validate and triage the alert,Reboot all servers,Notify customers publicly,Delete all logs,1
+1,Why is preserving evidence crucial in digital forensics?,For legal, compliance, and root cause analysis,To increase CPU usage,To add users,To change drives,1
+1,Which concept ensures that digital evidence has not been altered?,Chain of custody,Redundancy,High availability,Load balancing,1
+1,What is chain of custody?,Documented history of evidence handling,Network routing table,Backup schedule,Patch list,1
+1,Which tool type is used to create a bit-for-bit copy of a disk?,Forensic imaging tool,Text editor,Packet sniffer,Word processor,1
+1,Why should forensic analysis be done on a copy of the data?,To avoid altering the original evidence,To speed up CPUs,To reduce logs,To change OS,1
+1,What does "live response" mean in incident handling?,Collecting volatile data from a running system,Shutting down all systems,Reinstalling OS,Deleting users,1
+1,Which type of data is considered volatile?,RAM contents and running processes,Backed-up files,Printed documents,Tapes in storage,1
+1,Why is time synchronization (e.g. NTP) important for forensics?,Accurate timestamps across systems,Increase packet size,Change VLANs,Encrypt disks,1
+1,What log source is often critical in investigating authentication-related incidents?,Authentication/identity logs,DNS logs,Print logs,Weather logs,1
+1,What is the purpose of an incident classification scheme?,Prioritize and handle incidents consistently,Slow down responses,Reduce staffing,Change IP schemes,1
+1,Which of these is a good containment strategy for a compromised endpoint?,Isolate it from the network,Reboot repeatedly,Ignore alerts,Share passwords,1
+1,Why is communication planning important during incidents?,To control information flow and avoid panic or misinformation,To change product names,To redesign logo,To upgrade hardware,1
+1,What is a "post-incident review" or "lessons learned" meeting for?,Identify improvements and prevent recurrence,Assign blame publicly,Reduce documentation,Remove logs,1
+1,Which policy governs who can talk to media during an incident?,Communications or media policy,Backup policy,Password policy,Print policy,1
+1,Why should staff be trained on how to report suspicious activity?,Early reporting leads to faster detection,To reduce salary,To change teams,To avoid policies,1
+1,What is a "playbook" in incident response?,Step-by-step procedure for specific incident types,Backup schedule,Marketing plan,Asset inventory,1
+1,Which metric measures how quickly incidents are handled?,Mean Time to Respond (MTTR),Network latency,CPU utilization,Disk throughput,1
+1,What is the purpose of evidence tagging?,Uniquely identify each piece of evidence,Increase log size,Reduce backups,Change passwords,1
+1,Why should remote access to compromised systems be carefully controlled?,Attackers may still be active and monitoring,It speeds up resolution,It improves graphics,It patches systems,1
+1,Which of these is a key objective of digital forensics?,Identify what happened, how, and by whom,Increase uptime,Upgrade CPUs,Change UI,1
+1,What is "triage" in incident response?,Quickly assessing severity and priority of issues,Backing up data,Testing Wi‑Fi,Upgrading firmware,1
+1,Why is documentation during an incident important?,Supports legal, compliance, and knowledge transfer,Slows down work,Increases costs only,Adds colors,1
+1,What is "scope" in an incident investigation?,Range of systems, data, and users affected,Time of day,Number of staff,Type of hardware,1
+1,Which is a common error when handling potential evidence?,Modifying or deleting logs,Labeling all evidence,Securing devices,Notifying IR team,1
+1,Why should organizations run incident response exercises or simulations?,Test readiness and improve procedures,Increase downtime,Reduce staff,Change vendors,1
+1,What does " IOC " stand for in incident response?,Indicator of Compromise,Integrated Operations Center,Input Output Control,Internal Office Code,1
+1,Which of these is an example of an IOC?,Suspicious domain contacted by endpoints,Approved patch list,System warranty,Printer paper level,1
+1,Why is external threat intelligence useful during investigations?,Provides additional context about tools and behaviors,Reduces bandwidth,Improves UI,Changes SLAs,1
+1,What should be done with temporary IR tools left on systems after an incident?,Remove or secure them,Leave them forever,Share them publicly,Turn off logging,1
+1,What is a "forensic image"?,Exact copy of a storage device including free space,Screenshot of desktop,Text log file,Network diagram,1
+1,Why is it important to record who accessed evidence and when?,Maintain integrity and admissibility in court,Increase CPU usage,Change OS,Update drivers,1
+1,Which type of analysis looks at patterns across many incidents?,Trend analysis,Byte-level analysis,Single-file review,Printer checks,1
+1,What is the main goal of the recovery phase?,Safely restore systems to normal operation,Shut down permanently,Ignore issues,Change IP scheme,1
+1,Why should systems be monitored closely after recovery?,Detect any signs of reinfection or lingering issues,Increase marketing,Reduce uptime,Change vendors,1
+1,When should an organization involve law enforcement?,When legal or regulatory requirements and impact justify it,Immediately for all alerts,Never under any conditions,Only for hardware failures,1
+1,What is a "war room" during a major incident?,Central place for coordination and communication,Backup location,Training lab,Marketing office,1
+1,Why is having out-of-band communication channels useful in major incidents?,Primary channels may be compromised,To increase noise,To improve video,To change PCs,1
+1,Which document typically defines roles, responsibilities, and contacts for IR?,Incident Response Plan (IRP),Disaster Recovery Plan,Marketing Plan,Sales Playbook,1
+1,What is "forensic readiness"?,Preparing in advance to collect and use digital evidence,Fixing printers,Upgrading GPUs,Changing vendors,1

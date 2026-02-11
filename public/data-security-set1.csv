@@ -1,0 +1,48 @@
+Data Security – Set 1,
+1,What is the main goal of data security?,Protect data confidentiality, integrity, and availability,Increase bandwidth,Change logos,Improve colors,1
+1,What does data confidentiality focus on?,Ensuring data is accessible only to authorized users,Ensuring data is always online,Ensuring data is compressed,Ensuring data is colorful,1
+1,What does data integrity focus on?,Ensuring data is accurate and not altered improperly,Ensuring data is always encrypted,Ensuring data is large,Ensuring data is red,1
+1,What does data availability focus on?,Ensuring authorized users can access data when needed,Ensuring data is hidden,Ensuring data is small,Ensuring data is expensive,1
+1,Which control protects data if a laptop is stolen?,Full-disk encryption,Screen saver,Wallpaper,Mouse speed,1
+1,What is encryption at rest?,Encrypting data stored on disks or databases,Encrypting data on the network only,Encrypting emails only,Encrypting passwords only,1
+1,What is encryption in transit?,Encrypting data as it moves across networks,Encrypting only backups,Encrypting printers,Encrypting logs only,1
+1,Why is key management important for encryption?,If keys are lost or stolen, data security is affected,To increase speed,To add colors,To reduce logs,1
+1,What is data classification?,Labeling data by sensitivity to apply proper controls,Compressing data only,Deleting old data,Renaming files,1
+1,Which data classification typically needs strongest access controls?,Highly confidential,Public,Internal use,Low,1
+1,What is data masking?,Obscuring parts of data to prevent exposure,Deleting data,Copying data,Compressing data,1
+1,Why is backup important for data security?,Allows recovery after loss, corruption, or ransomware,Increases performance,Changes fonts,Improves colors,1
+1,What is a backup retention policy?,Defines how long backups are kept,Defines who prints reports,Defines wallpaper,Defines Wi‑Fi,1
+1,Why should backups also be encrypted?,They contain full copies of sensitive data,They use tapes,They are small,They are offline,1
+1,What is data minimization?,Collecting and keeping only necessary data,Collecting as much data as possible,Deleting all data,Compressing data,1
+1,Why is data minimization helpful for security and privacy?,Less data means less to protect and lose,It increases bandwidth,It changes CPU speed,It changes theme,1
+1,What is tokenization in data security?,Replacing sensitive data with non-sensitive tokens,Compressing data,Deleting data,Printing data,1
+1,What is a data breach?,Unauthorized access, disclosure, or theft of data,Server reboot,Backup completion,Password change,1
+1,Why are access controls important for databases?,Limit who can view or modify data,Increase database size,Reduce CPU,Change colors,1
+1,What is a DLP (Data Loss Prevention) solution used for?,Detect and prevent unauthorized transfer of sensitive data,Improve Wi‑Fi,Change fonts,Compress images,1
+1,Why is secure disposal of storage media important?,Residual data may be recovered if not properly destroyed,It speeds up PCs,It reduces noise,It changes colors,1
+1,What is "need-to-know" principle?,Users should access only data required for their tasks,Users should access all data,Users should access no data,Users choose access,1
+1,Why are audit logs important for data security?,Track who accessed or changed data,Improve graphics,Change colors,Increase marketing,1
+1,What is "data at rest"?,Data stored on disks, tapes, or other media,Data traveling on network,Data in RAM only,Data on screen only,1
+1,What is "data in use"?,Data actively processed in memory,Data in backups,Data in archives,Data on paper,1
+1,Why should sensitive data not be stored in plain text?,Can be easily read if exposed,Improves performance,Changes fonts,Reduces color,1
+1,What is a data retention policy?,Defines how long to retain different types of data,Defines password length,Defines themes,Defines storage brand,1
+1,Why should old backups be disposed of according to policy?,To reduce risk and storage use,To increase risk,To reduce uptime,To change vendors,1
+1,What is "least privilege" for data access?,Grant minimum data access needed for role,Grant access to all data,Grant no access ever,Grant random access,1
+1,Why is database activity monitoring useful?,Detect suspicious queries and access patterns,Improve latency,Change schemas,Reduce memory,1
+1,What is "PII"?,Personally Identifiable Information,Public Internal Info,Private Internal Index,Personal Internet Input,1
+1,Which is an example of PII?,National ID number,Switch model,Server room temperature,Printer paper count,1
+1,What is "data anonymization"?,Removing or altering identifiers so individuals cannot be identified,Deleting data,Compressing data,Encrypting data with one key,1
+1,Why is encryption not always sufficient by itself?,Keys can be stolen and systems can be compromised,It is always enough,It breaks backups,It changes fonts,1
+1,What is "database encryption" typically protecting against?,Theft of storage media or backups,Slow queries,Large tables,New users,1
+1,Why should developers avoid using production data in test environments?,Test environments are usually less secure,It slows development,It changes color,It reduces UX,1
+1,What is "data owner" responsible for?,Deciding who can access and how to protect a dataset,Backing up data,Printing data,Changing UI,1
+1,What is "data steward" responsible for?,Managing data quality and usage under owner’s guidance,Buying hardware,Marketing data,Printing reports,1
+1,Why is role-based access control important for data security?,Simplifies managing who can access what data,Increases risk,Reduces logging,Changes colors,1
+1,What is "data leakage"?,Unauthorized or accidental release of sensitive data,Data compression,Data encryption,Data backup,1
+1,Why should portable drives be controlled?,They can carry large amounts of sensitive data easily,They increase speed,They reduce noise,They change colors,1
+1,What is "data discovery"?,Finding where sensitive data resides,Finding printers,Finding servers,Finding cables,1
+1,Why is regular data discovery important?,Identify unknown stores of sensitive data,Increase stores,Change OS,Reduce RAM,1
+1,What is "encryption key rotation"?,Regularly changing encryption keys,Deleting keys,Backing up keys,Compressing keys,1
+1,Why should access to encryption keys be tightly controlled?,Keys unlock sensitive data,They make disks faster,They change color,They play music,1
+1,What is "data sovereignty"?,Data subject to laws of the country where it resides,Data own identity,Data ownership by users,Data backup location,1
+1,Why is physical security relevant for data security?,Physical access can lead to data theft or tampering,It changes music,It changes themes,It changes chairs,1

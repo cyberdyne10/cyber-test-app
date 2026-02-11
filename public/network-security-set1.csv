@@ -1,0 +1,50 @@
+Understanding Network Security,
+1,Which device is primarily used to separate a trusted internal network from an untrusted external network?,Firewall,Switch,Router,Hub,1
+1,What is the main purpose of a firewall rule?,To filter traffic based on defined policies,To increase bandwidth,To assign IP addresses automatically,To encrypt all traffic,1
+1,Which protocol is MOST commonly used to securely manage network devices over the internet?,SSH,Telnet,FTP,HTTP,1
+1,What is the term for an unauthorized attempt to access a system or network?,Intrusion,Backup,Routing,Failover,1
+1,Which type of attack attempts to overwhelm a network or service with excessive traffic?,Denial-of-Service (DoS),Phishing,Man-in-the-Middle,Brute-force,1
+1,What is the primary goal of network segmentation?,To limit the spread of attacks and improve control,To reduce IP address usage,To increase wireless coverage,To simplify cabling,1
+1,Which of the following is an example of a strong password?,Cyb3r!Logic2025,123456,password,admin,1
+1,What does VPN stand for?,Virtual Private Network,Virtual Public Network,Verified Private Node,Virtual Protocol Network,1
+1,Which protocol is commonly used to provide secure remote access via VPN?,IPsec,SMTP,POP3,DHCP,1
+1,What is the purpose of an IDS (Intrusion Detection System)?,To monitor traffic and alert on suspicious activity,To automatically assign IP addresses,To block all incoming traffic,To manage user accounts,1
+1,Which term describes the process of converting readable data into an unreadable format?,Encryption,Routing,Switching,Compression,1
+1,What is the main risk of using Telnet instead of SSH?,Credentials are sent in clear text,It consumes more CPU,It cannot be used over WAN,It blocks ICMP,1
+1,Which of the following best describes a DMZ in network security?,A semi-trusted zone between internal and external networks,A fully isolated backup network,A wireless-only segment,A VPN-only network,1
+1,Which port is typically used by HTTPS?,443,80,21,23,1
+1,Which of these is a best practice for securing network devices?,Change default passwords,Use the same password everywhere,Enable remote access for all users,Disable logging,1
+1,What is MAC filtering used for on a wireless network?,To allow or deny devices based on hardware addresses,To compress data,To encrypt SSIDs,To assign IP addresses,1
+1,Which security principle ensures that users only have access to what they need to perform their job?,Least privilege,Redundancy,High availability,Load balancing,1
+1,What is a common method to protect against brute-force login attacks?,Account lockout policy,Disabling logging,Using DHCP reservations,Using static routing,1
+1,Which of the following is a secure way to transfer files over a network?,SFTP,TFTP,FTP,HTTP,1
+1,What is the purpose of network access control (NAC)?,To enforce security policies before allowing devices onto the network,To route traffic between VLANs,To provide wireless coverage,To monitor CPU usage,1
+1,What is a VLAN primarily used for?,Logically segmenting a network,Encrypting traffic,Backing up data,Providing DNS services,1
+1,Which protocol is used to securely browse websites?,HTTPS,HTTP,FTP,TELNET,1
+1,What is a major risk of using open public Wi‑Fi without protection?,Traffic can be intercepted by attackers,Bandwidth is always limited,It disables antivirus,It changes your IP permanently,1
+1,Which tool is commonly used by attackers to capture network packets?,Wireshark,WordPress,Excel,Photoshop,1
+1,What do we call software designed specifically to damage or disrupt systems?,Malware,Patch,Backup,Hypervisor,1
+1,Which concept focuses on ensuring that data is not modified by unauthorized users?,Integrity,Availability,Scalability,Redundancy,1
+1,Which wireless security protocol is currently recommended for most environments?,WPA3,WEP,WPA,WPA2-TKIP,1
+1,What is the main purpose of two-factor authentication (2FA)?,To require an additional verification factor beyond a password,To speed up logins,To bypass firewalls,To encrypt all email,1
+1,Which term refers to unauthorized physical access to networking equipment?,Physical breach,Routing loop,Link aggregation,Failover,1
+1,What is port security on a switch used to prevent?,Unauthorized devices connecting to a port,Broadcast traffic,Internet access,DNS resolution,1
+1,Which of these is an example of social engineering?,Tricking a user to reveal their password,Configuring VLANs,Installing patches,Backing up configs,1
+1,What does "principle of defense in depth" mean?,Using multiple layers of security controls,Using only one strong firewall,Using only encryption,Using only physical security,1
+1,Which log source is MOST useful to identify repeated failed login attempts?,Authentication logs,DNS logs,Print server logs,Backup logs,1
+1,What is the safest way to apply security patches to critical network devices?,Test in a lab then schedule maintenance,Apply immediately on production without testing,Ignore patches,Apply only once a year,1
+1,Which technology can hide internal IP addresses from the public internet?,NAT,DHCP,DNS,SMTP,1
+1,What is a common symptom of a DoS attack?,Service becomes slow or unavailable,Slight increase in temperature,Better bandwidth,Improved latency,1
+1,What is the purpose of a honeypot in network security?,To lure attackers and study their behavior,To block all traffic,To accelerate routing,To compress files,1
+1,Which protocol is often blocked at firewalls because it can be used for reconnaissance?,ICMP,DNS,DHCP,SMTP,1
+1,Which device operates primarily at OSI Layer 7 for security filtering?,Next-generation firewall,Switch,Hub,Repeater,1
+1,What is network hardening?,Reducing vulnerabilities by disabling unused services and ports,Adding more bandwidth,Increasing wireless channels,Using longer cables,1
+1,What is a security baseline?,A minimum set of security configurations,Maximum performance setting,A type of backup,A routing table,1
+1,Which attack relies on sending fraudulent emails that appear legitimate?,Phishing,DoS,Port scanning,ARP spoofing,1
+1,Which protocol adds security to HTTP traffic?,TLS,SMTP,DHCP,SNMP,1
+1,What is log retention important for?,Investigating incidents and meeting compliance,Speeding up the CPU,Reducing memory,Improving Wi‑Fi speed,1
+1,Which action should be taken first after detecting a confirmed network breach?,Contain the incident to prevent further damage,Immediately rebuild the network,Publicly disclose all details,Ignore to avoid panic,1
+1,Which of the following is a strong way to secure remote administrative access?,Use VPN + SSH with key-based auth,Use Telnet over the internet,Use default passwords with SSH,Use HTTP with simple password,1
+1,Why is network documentation important for security?,It helps understand topology and identify weak points,It replaces firewalls,It removes need for monitoring,It speeds up switches,1
+1,Which of the following best describes "zero trust" networking?,Never implicitly trust devices; always verify,Trust all internal devices,Only use one firewall,Disable all encryption,1
+1,Why should default SNMP community strings be changed?,To prevent unauthorized monitoring of network devices,To speed up routing,To allow DHCP,To enable VLANs,1

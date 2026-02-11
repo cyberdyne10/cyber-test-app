@@ -1,0 +1,48 @@
+IoT Security – Set 1,
+1,What does IoT stand for?,Internet of Things,Information of Technology,Internal of Traffic,Internet of Tools,1
+1,Which is a common example of an IoT device?,Smart thermostat,Core router,Backup tape,CRT monitor,1
+1,Why are IoT devices often targeted by attackers?,They are numerous and often poorly secured,They are too expensive,They use fiber,They are offline,1
+1,What is a common default weakness in many IoT devices?,Default usernames and passwords,High CPU speed,Strong encryption,Two-factor authentication,1
+1,What is a basic first step to secure IoT devices?,Change default credentials,Increase brightness,Turn off logging,Reduce memory,1
+1,Why should IoT devices be placed on separate network segments?,Limit impact if they are compromised,Increase bandwidth,Change DNS,Improve graphics,1
+1,What is network segmentation for IoT?,Using VLANs or separate networks for IoT devices,Changing screen size,Compressing data,Upgrading routers only,1
+1,Why is firmware updating important for IoT security?,Patches vulnerabilities and bugs,Reduces CPU usage,Changes display,Improves colors,1
+1,What is the risk of unsupported IoT devices?,They no longer receive security updates,They always improve security,They reduce latency,They increase bandwidth,1
+1,Which protocol is commonly used for IoT messaging?,MQTT,FTP,SMTP,IMAP,1
+1,What is a risk of exposing IoT management interfaces to the internet?,Remote exploitation by attackers,Better monitoring,More bandwidth,Improved cooling,1
+1,What is the purpose of an IoT gateway?,Connect and manage IoT devices centrally,Increase phone signal,Change passwords automatically,Print logs,1
+1,Why should unnecessary services be disabled on IoT devices?,Reduce attack surface,Increase attack surface,Improve color,Change fonts,1
+1,Which control helps detect unusual behavior from IoT devices?,Network monitoring and anomaly detection,Wallpaper change,Screen saver,Keyboard layout,1
+1,What is hardcoding credentials in IoT firmware?,Embedding fixed usernames/passwords in code,Using encryption,Changing IPs,Updating logs,1
+1,Why is hardcoded credential a serious risk?,Cannot be changed easily and may leak publicly,Improves security,Reduces logs,Speeds up devices,1
+1,What is the benefit of device identity management for IoT?,Track and control each device’s authentication,Increase size,Change color,Improve audio,1
+1,Why should IoT devices use secure protocols (e.g., TLS)?,Protect data in transit from eavesdropping,Fill disks,Slow networks,Change masks,1
+1,What is a botnet?,Network of compromised devices controlled by attacker,Group of admins,Backup cluster,Printer network,1
+1,Which famous IoT-based botnet launched massive DDoS attacks?,Mirai,Stuxnet,WannaCry,Conficker,1
+1,What should be done before connecting a new IoT device to production network?,Change defaults and update firmware,Plug and forget,Disable encryption,Share credentials,1
+1,Why is asset inventory of IoT devices important?,Know what is connected and its security posture,Reduce count,Improve marketing,Change vendors,1
+1,Why should IoT devices be restricted from accessing critical servers?,They may be compromised and used as pivot points,To reduce CPU,To change OS,To increase light,1
+1,What is physical tampering risk for IoT?,Attackers gaining access to device hardware,Slow network,High CPU,Low memory,1
+1,Why should debugging interfaces on IoT devices be disabled or protected?,They can provide deep access for attackers,They improve battery,They change color,They fix bugs automatically,1
+1,What is a secure method to manage IoT device configurations at scale?,Central management platform with auth and logging,Manual changes without records,Public spreadsheets,Random updates,1
+1,Why is logging important on IoT gateways?,Investigate incidents and monitor behavior,Increase noise,Reduce RAM,Change fonts,1
+1,What is "device onboarding" in IoT?,Securely enrolling new devices into the system,Changing OS,Decommissioning devices,Updating apps,1
+1,Why should IoT cloud APIs be secured?,They control devices and data flows,They control printers only,They set wallpapers,They change RAM,1
+1,Why is vulnerability scanning useful for IoT networks?,Identify weak devices and services,Increase latency,Reduce CPU,Change VLAN,1
+1,Which type of update mechanism is preferred for IoT devices?,Secure, signed OTA (over-the-air) updates,Manual USB updates only,No updates ever,Random patches,1
+1,Why is it risky to connect consumer IoT gadgets directly to corporate LAN?,They may not meet corporate security standards,They always encrypt data,They improve routing,They are certified,1
+1,What is "IoT device lifecycle"?,From deployment to decommissioning and disposal,From boot to shutdown,From login to logout,From sale to warranty,1
+1,Why is secure decommissioning important for IoT devices?,They may store credentials and data,They are cheap,They are small,They are fast,1
+1,Why should IoT devices be time-synchronized?,Accurate logs and event correlation,Better colors,More RAM,Better audio,1
+1,What is an example of an IoT sensor?,Temperature sensor,Core router,Desktop,UPS,1
+1,Why is bandwidth limiting sometimes used with IoT devices?,Prevent them from overwhelming networks during issues,Increase speed,Change DNS,Improve graphics,1
+1,What is "device attestation" in IoT?,Verifying device integrity before allowing access,Checking color,Changing labels,Counting ports,1
+1,Why should IoT admin accounts use strong unique passwords?,Reduce chance of compromise across devices,Increase speed,Decrease logs,Change fonts,1
+1,What is "shadow IoT"?,Unauthorized IoT devices connected to network,Dark mode UI,Offline IoT,Encrypted traffic,1
+1,Which network technology can help contain IoT devices?,VLANs and ACLs,Only DNS,Only DHCP,Only ARP,1
+1,Why is regular review of IoT inventory and configs necessary?,Devices and risks change over time,Change colors,Change logos,Increase ads,1
+1,What is the impact of an IoT device participating in a botnet?,Used to launch attacks against others,Improves uptime,Reduces power,Improves audio,1
+1,Why should IoT default open ports be reviewed and limited?,Reduce unnecessary exposure,Increase exposure,Change cables,Improve icons,1
+1,What is an IoT security gateway?,Device that enforces security policies for IoT traffic,Wi‑Fi booster,Printer server,Backup unit,1
+1,Why should IoT vendors be evaluated for security practices?,Weak vendors can introduce systemic risk,They are cheap,They are famous,They use colors,1
+1,What role does network anomaly detection play in IoT security?,Flag unusual traffic from compromised devices,Change power,Change OS,Change audio,1

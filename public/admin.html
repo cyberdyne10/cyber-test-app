@@ -6,6 +6,21 @@
   <title>Cyber Test – Admin</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="style.css">
+  <style>
+    .stat-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .stat-val { font-size: 2rem; font-weight: bold; color: #38bdf8; }
+    .stat-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; }
+    .nav-tabs .nav-link { color: #9ca3af; }
+    .nav-tabs .nav-link.active { background: rgba(56,189,248,0.1); color: #38bdf8; border-color: rgba(56,189,248,0.3); }
+    .live-dot { height: 10px; width: 10px; background: #22c55e; border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+  </style>
 </head>
 <body>
   <div class="main-shell">
@@ -25,10 +40,11 @@
           </div>
           <div class="panel-subtitle">Define tests, seed question banks, and monitor student performance.</div>
         </div>
-        <div class="text-end d-none d-md-block">
-          <div class="info-chip">
+        <div class="text-end d-none d-md-block" id="adminHeaderStatus" style="display:none !important;">
+          <div class="info-chip d-inline-flex align-items-center gap-2">
             <span class="label">Visibility</span>
             <span class="value">Instructor Only</span>
+            <button id="adminLogoutBtn" class="btn btn-sm btn-outline-danger" style="font-size: 0.7rem; padding: 2px 8px; margin-left: 5px;">Logout</button>
           </div>
         </div>
       </div>
@@ -51,123 +67,257 @@
       </div>
 
       <div id="adminContent" style="display:none;">
-        <div class="row-grid mb-4">
-          <div>
-            <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:0.15em;">Admin Settings</h3>
+        
+        <!-- TABS -->
+        <ul class="nav nav-tabs mb-4" id="adminTabs">
+          <li class="nav-item"><a class="nav-link active" href="#" id="tab-manage">Manage Tests</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" id="tab-analytics">Analytics & Results</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" id="tab-students">Students</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" id="tab-live">Live Monitor <span class="live-dot ml-1"></span></a></li>
+          <li class="nav-item"><a class="nav-link" href="#" id="tab-settings">Settings</a></li>
+        </ul>
+
+        <!-- MANAGE TESTS TAB -->
+        <div id="view-manage">
+          <div class="row-grid mb-4">
+            <div>
+              <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:0.15em;">Create / Edit Test</h3>
+              <div class="mb-3">
+                <label class="form-label">Test Name</label>
+                <input id="testName" class="form-control" placeholder="e.g. Network Security 101" />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea id="testDesc" class="form-control" placeholder="Short summary"></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Instructions / Rules</label>
+                <textarea id="testInstructions" class="form-control" placeholder="e.g. No calculators allowed. Pass mark is 70%."></textarea>
+              </div>
+              <div class="row">
+                <div class="col-6 mb-3">
+                  <label class="form-label">Duration (mins)</label>
+                  <input id="testDuration" type="number" class="form-control" placeholder="30" />
+                </div>
+                <div class="col-6 mb-3">
+                  <label class="form-label">Type</label>
+                  <select id="testType" class="form-select">
+                    <option value="exam">Standard Exam</option>
+                    <option value="practice">Practice Mode</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-6 mb-3">
+                  <label class="form-label">Questions / Attempt</label>
+                  <input id="testSubset" type="number" class="form-control" placeholder="All" />
+                </div>
+                <div class="col-6 mb-3">
+                  <label class="form-label">Max Attempts</label>
+                  <input id="testMaxAttempts" type="number" class="form-control" placeholder="Unlimited" />
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-6 mb-3">
+                  <label class="form-label">Start Time (Optional)</label>
+                  <input id="testStartTime" type="datetime-local" class="form-control" />
+                </div>
+                <div class="col-6 mb-3">
+                  <label class="form-label">End Time (Optional)</label>
+                  <input id="testEndTime" type="datetime-local" class="form-control" />
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Access Key (Optional)</label>
+                <input id="testAccessKey" class="form-control" placeholder="e.g. SECURE99" />
+              </div>
+              <button id="createTestBtn" class="btn btn-fx-primary mb-4">
+                <span class="pulse-dot"></span>
+                <span>Save / Create Test</span>
+              </button>
+            </div>
+
+            <div>
+              <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:0.15em;">Question Bank</h3>
+              <div class="mb-3">
+                <label class="form-label">Target Test</label>
+                <div class="d-flex gap-2 align-items-center">
+                  <select id="testsList" class="form-select"></select>
+                  <button id="duplicateTestBtn" class="btn btn-sm btn-outline-info" title="Duplicate Test">Copy</button>
+                  <button id="deleteTestBtn" type="button" class="btn btn-fx-danger" style="white-space:nowrap;">Delete</button>
+                </div>
+              </div>
+
+              <!-- Import CSV -->
+              <div class="mb-3 p-3 border rounded bg-dark">
+                <label class="form-label">Bulk Import Questions (CSV)</label>
+                <div class="d-flex gap-2">
+                  <input type="file" id="importFile" class="form-control" accept=".csv" />
+                  <button id="importBtn" class="btn btn-sm btn-success">Upload</button>
+                </div>
+                <small class="text-muted">Format: Text,Mark,Opt1,Opt2,Opt3,Opt4,CorrectIdx(1-4)</small>
+              </div>
+
+              <div class="mb-3" id="questionList" style="max-height: 240px; overflow-y: auto; border-radius: 12px; border: 1px solid rgba(148,163,184,0.3); padding: 0.5rem 0.75rem; background: rgba(15,23,42,0.85);">
+                <div class="text-muted" style="font-size:0.8rem;">Questions for this test will appear here. Tap one to edit.</div>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label">Question Text</label>
+                <textarea id="questionText" class="form-control" placeholder="Type the full question"></textarea>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Image (Optional)</label>
+                <input type="file" id="questionImage" class="form-control" accept="image/*" />
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Marks (Weight)</label>
+                <input id="questionMarks" type="number" class="form-control" value="1" placeholder="1" />
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Options</label>
+                <input id="opt1" class="form-control mb-1" placeholder="Option 1" />
+                <input id="opt2" class="form-control mb-1" placeholder="Option 2" />
+                <input id="opt3" class="form-control mb-1" placeholder="Option 3" />
+                <input id="opt4" class="form-control mb-1" placeholder="Option 4" />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Correct Option</label>
+                <select id="correctOpt" class="form-select">
+                  <option value="1">Option 1</option>
+                  <option value="2">Option 2</option>
+                  <option value="3">Option 3</option>
+                  <option value="4">Option 4</option>
+                </select>
+              </div>
+              <button id="addQuestionBtn" class="btn btn-fx-secondary mb-4">Add Question</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ANALYTICS TAB -->
+        <div id="view-analytics" class="hidden">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="h5 m-0">Performance Overview</h3>
+            <a href="/api/export/csv" class="btn btn-sm btn-success">Download Full CSV Export</a>
+          </div>
+          <div id="analyticsGrid" class="row-grid mb-5"></div>
+          <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:0.15em;">Submitted Attempts</h3>
+          <div class="table-responsive">
+            <table class="table table-dark table-borderless align-middle" style="background:transparent;">
+              <thead style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.16em; color:#9ca3af;">
+                <tr>
+                  <th>Student</th><th>Test</th><th>Score</th><th>Violations</th><th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="attemptsBody" style="font-size:0.85rem;"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- STUDENTS TAB -->
+        <div id="view-students" class="hidden">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="h5 m-0">Registered Students</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-dark table-borderless align-middle" style="background:transparent;">
+              <thead style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.16em; color:#9ca3af;">
+                <tr>
+                  <th>Reg No</th>
+                  <th>Full Name</th>
+                  <th>Username</th>
+                  <th>Certificates</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="studentsBody" style="font-size:0.85rem;"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- LIVE MONITOR TAB -->
+        <div id="view-live" class="hidden">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="h5 m-0">Active Students <span class="live-dot ml-2"></span></h3>
+            <button onclick="loadLive()" class="btn btn-sm btn-outline-info">Refresh</button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-dark table-borderless align-middle" style="background:transparent;">
+              <thead style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.16em; color:#9ca3af;">
+                <tr>
+                  <th>Student</th><th>Test</th><th>Started At</th><th>Violations</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="liveBody" style="font-size:0.85rem;"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SETTINGS TAB -->
+        <div id="view-settings" class="hidden">
+          <div class="col-md-6">
+            <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:0.15em;">Security</h3>
             <div class="mb-3">
-              <label class="form-label">Admin Access Phrase</label>
+              <label class="form-label">Change Admin Access Phrase</label>
               <input id="adminPhraseSetting" class="form-control" placeholder="Enter new admin phrase" />
             </div>
             <button id="updateAdminPhraseBtn" class="btn btn-fx-secondary mb-4">Update Phrase</button>
           </div>
-
-          <div>
-            <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:0.15em;">Create Test</h3>
-            <div class="mb-3">
-              <label class="form-label">Test Name</label>
-              <input id="testName" class="form-control" placeholder="e.g. Network Security 101" />
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Description</label>
-              <textarea id="testDesc" class="form-control" placeholder="Short summary"></textarea>
-            </div>
-            <button id="createTestBtn" class="btn btn-fx-primary mb-4">
-              <span class="pulse-dot"></span>
-              <span>Create Test</span>
-            </button>
-          </div>
-
-          <div>
-            <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:0.15em;">Question Bank</h3>
-            <div class="mb-3">
-              <label class="form-label">Target Test</label>
-              <div class="d-flex gap-2">
-                <select id="testsList" class="form-select"></select>
-                <button id="deleteTestBtn" type="button" class="btn btn-fx-danger" style="white-space:nowrap;">Delete Test</button>
-              </div>
-            </div>
-
-            <div class="mb-3" id="questionList" style="max-height: 240px; overflow-y: auto; border-radius: 12px; border: 1px solid rgba(148,163,184,0.3); padding: 0.5rem 0.75rem; background: rgba(15,23,42,0.85);">
-              <div class="text-muted" style="font-size:0.8rem;">Questions for this test will appear here. Tap one to edit.</div>
-            </div>
-
-            <div class="mb-2">
-              <label class="form-label">Question Text</label>
-              <textarea id="questionText" class="form-control" placeholder="Type the full question"></textarea>
-            </div>
-            <div class="mb-2">
-              <label class="form-label">Options</label>
-              <input id="opt1" class="form-control mb-1" placeholder="Option 1" />
-              <input id="opt2" class="form-control mb-1" placeholder="Option 2" />
-              <input id="opt3" class="form-control mb-1" placeholder="Option 3" />
-              <input id="opt4" class="form-control mb-1" placeholder="Option 4" />
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Correct Option</label>
-              <select id="correctOpt" class="form-select">
-                <option value="1">Option 1</option>
-                <option value="2">Option 2</option>
-                <option value="3">Option 3</option>
-                <option value="4">Option 4</option>
-              </select>
-            </div>
-            <button id="addQuestionBtn" class="btn btn-fx-secondary mb-4">Add Question</button>
-          </div>
         </div>
 
-        <hr class="section-divider" />
-
-        <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:0.15em;">Recent Attempts</h3>
-        <div class="table-responsive">
-          <table class="table table-dark table-borderless align-middle" style="background:transparent;">
-            <thead style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.16em; color:#9ca3af;">
-              <tr>
-                <th>Student</th>
-                <th>Student ID</th>
-                <th>Test</th>
-                <th>Score</th>
-                <th>Total</th>
-                <th>Time</th>
-              </tr>
-            </thead>
-            <tbody id="attemptsBody" style="font-size:0.85rem;"></tbody>
-          </table>
-        </div>
-
-        <div class="mt-3 d-flex justify-content-between align-items-center btn-row-stack">
-          <a href="index.html" class="btn btn-fx-secondary">Back to Student View</a>
-          <small class="text-muted">Table refreshes every 10 seconds.</small>
-        </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Simple admin password (front-end only).
-    const DEFAULT_ADMIN_PASSWORD = 'CyberAdmin2025!';
-
-    function getAdminPassword() {
-      return localStorage.getItem('cln_admin_password') || DEFAULT_ADMIN_PASSWORD;
-    }
-
-    function setAdminPassword(newPwd) {
-      localStorage.setItem('cln_admin_password', newPwd);
-    }
-
     const loginSection = document.getElementById('loginSection');
     const adminContent = document.getElementById('adminContent');
     const loginError = document.getElementById('loginError');
     const loginBtn = document.getElementById('loginBtn');
 
-    loginBtn.addEventListener('click', () => {
-      const entered = document.getElementById('adminPassword').value;
-      if (entered === getAdminPassword()) {
-        loginSection.style.display = 'none';
-        adminContent.style.display = 'block';
-        loginError.style.display = 'none';
-        initAdmin();
-      } else {
-        loginError.style.display = 'block';
+    document.getElementById('adminLogoutBtn').addEventListener('click', () => {
+      location.reload();
+    });
+
+    // Tab Logic
+    const views = ['view-manage', 'view-analytics', 'view-students', 'view-live', 'view-settings'];
+    const tabs = ['tab-manage', 'tab-analytics', 'tab-students', 'tab-live', 'tab-settings'];
+
+    function switchTab(idx) {
+      views.forEach((v, i) => {
+        document.getElementById(v).classList.toggle('hidden', i !== idx);
+        document.getElementById(tabs[i]).classList.toggle('active', i === idx);
+      });
+      if (idx === 1) { loadAnalytics(); loadAttempts(); }
+      if (idx === 2) { loadStudents(); }
+      if (idx === 3) loadLive();
+    }
+
+    tabs.forEach((t, i) => document.getElementById(t).addEventListener('click', (e) => { e.preventDefault(); switchTab(i); }));
+
+    // Login Logic (SERVER SIDE)
+    loginBtn.addEventListener('click', async () => {
+      const password = document.getElementById('adminPassword').value;
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ password })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          loginSection.style.display = 'none';
+          adminContent.style.display = 'block';
+          loginError.style.display = 'none';
+          document.getElementById('adminHeaderStatus').style.setProperty('display', 'block', 'important');
+          initAdmin();
+        } else {
+          loginError.style.display = 'block';
+        }
+      } catch (e) {
+        alert('Server error checking password');
       }
     });
 
@@ -176,102 +326,91 @@
       const tests = await res.json();
       const list = document.getElementById('testsList');
       list.innerHTML = '';
-      const deleteTestBtn = document.getElementById('deleteTestBtn');
-
       tests.forEach(t => {
         const opt = document.createElement('option');
         opt.value = t.id;
         opt.textContent = t.name;
         list.appendChild(opt);
       });
-
-      if (tests.length) {
-        await loadQuestionsForTest(tests[0].id);
-      }
-
-      deleteTestBtn.onclick = async () => {
-        const currentId = list.value;
-        if (!currentId) return;
-        if (!confirm('Delete this entire test and all its questions?')) return;
-        await fetch(`/api/tests/${currentId}`, { method: 'DELETE' });
-        await loadTests();
-        window.currentQuestionForEdit = null;
-      };
-
-      list.addEventListener('change', async () => {
-        const id = list.value;
-        await loadQuestionsForTest(id);
-        window.currentQuestionForEdit = null;
-        document.getElementById('questionText').value = '';
-        ['opt1','opt2','opt3','opt4'].forEach(id => document.getElementById(id).value = '');
-      });
+      if (tests.length) await loadTestDetails(tests[0].id);
+      
+      document.getElementById('testsList').addEventListener('change', (e) => loadTestDetails(e.target.value));
     }
 
-    let testIdForQuestions = null;
+    async function loadTestDetails(testId) {
+      const resMeta = await fetch(`/api/tests/${testId}/info`);
+      const meta = await resMeta.json();
+      if (meta) {
+        document.getElementById('testName').value = meta.name;
+        document.getElementById('testDesc').value = meta.description || '';
+        document.getElementById('testInstructions').value = meta.instructions || '';
+        document.getElementById('testDuration').value = meta.duration_minutes || '';
+        document.getElementById('testType').value = meta.type || 'exam';
+        document.getElementById('testSubset').value = meta.questions_per_attempt || '';
+        document.getElementById('testMaxAttempts').value = meta.max_attempts || '';
+        document.getElementById('testAccessKey').value = meta.access_key || '';
 
-    async function loadQuestionsForTest(testId) {
-      testIdForQuestions = testId;
+        const startInput = document.getElementById('testStartTime');
+        const endInput = document.getElementById('testEndTime');
+        if (meta.start_time) {
+          const d = new Date(meta.start_time);
+          const off = d.getTimezoneOffset();
+          const local = new Date(d.getTime() - off * 60000);
+          startInput.value = local.toISOString().slice(0, 16);
+        } else {
+          startInput.value = '';
+        }
+        if (meta.end_time) {
+          const d = new Date(meta.end_time);
+          const off = d.getTimezoneOffset();
+          const local = new Date(d.getTime() - off * 60000);
+          endInput.value = local.toISOString().slice(0, 16);
+        } else {
+          endInput.value = '';
+        }
+      }
+
       const res = await fetch(`/api/tests/${testId}/questions-full`);
       const questions = await res.json();
       const container = document.getElementById('questionList');
       container.innerHTML = '';
-      if (!questions.length) {
-        container.innerHTML = '<div class="text-muted" style="font-size:0.8rem;">No questions yet for this test.</div>';
-        return;
-      }
       questions.forEach(q => {
         const item = document.createElement('div');
         item.className = 'mb-2 question-item d-flex justify-content-between align-items-center';
-        item.style.cursor = 'pointer';
-        item.style.padding = '0.45rem 0.5rem';
-        item.style.borderRadius = '8px';
-        item.style.border = '1px solid rgba(30,64,175,0.4)';
-        item.style.background = 'rgba(15,23,42,0.95)';
-
+        item.style.padding = '0.5rem';
+        item.style.borderBottom = '1px solid #334155';
+        
         const txt = document.createElement('span');
-        txt.textContent = q.text;
-        txt.style.flex = '1';
-        txt.style.marginRight = '0.5rem';
-
+        txt.textContent = `[${q.marks} pts] ${q.text}`;
+        if (q.image_url) txt.textContent += ' (IMG)';
+        
         const delBtn = document.createElement('button');
-        delBtn.type = 'button';
         delBtn.textContent = '×';
-        delBtn.style.border = 'none';
-        delBtn.style.borderRadius = '999px';
-        delBtn.style.width = '24px';
-        delBtn.style.height = '24px';
-        delBtn.style.display = 'flex';
-        delBtn.style.alignItems = 'center';
-        delBtn.style.justifyContent = 'center';
-        delBtn.style.fontSize = '16px';
-        delBtn.style.background = 'rgba(248,113,113,0.18)';
-        delBtn.style.color = '#fecaca';
-        delBtn.style.cursor = 'pointer';
-
-        delBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          if (!confirm('Delete this question?')) return;
+        delBtn.className = 'btn btn-sm btn-outline-danger border-0';
+        delBtn.onclick = async (e) => {
+          if(!confirm('Delete?')) return;
           await fetch(`/api/questions/${q.id}`, { method: 'DELETE' });
-          await loadQuestionsForTest(testIdForQuestions);
-        });
+          loadTestDetails(testId);
+        };
 
-        item.addEventListener('click', () => {
-          // populate editor with selected question
-          document.getElementById('questionText').value = q.text;
-          document.getElementById('opt1').value = q.options[0]?.text || '';
-          document.getElementById('opt2').value = q.options[1]?.text || '';
-          document.getElementById('opt3').value = q.options[2]?.text || '';
-          document.getElementById('opt4').value = q.options[3]?.text || '';
-          const correctIndex = q.options.findIndex(o => o.is_correct);
-          if (correctIndex >= 0) {
-            document.getElementById('correctOpt').value = (correctIndex + 1).toString();
-          }
-          // store current question id + options for update
-          window.currentQuestionForEdit = q;
-        });
         item.appendChild(txt);
         item.appendChild(delBtn);
         container.appendChild(item);
+      });
+    }
+
+    async function loadAnalytics() {
+      const res = await fetch('/api/analytics');
+      const stats = await res.json();
+      const grid = document.getElementById('analyticsGrid');
+      grid.innerHTML = '';
+      stats.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'stat-card';
+        card.innerHTML = `<div class="h5 text-white mb-2">${s.name}</div>
+          <div class="row"><div class="col-6"><div class="stat-val">${s.attempts}</div><div class="stat-label">Attempts</div></div>
+          <div class="col-6"><div class="stat-val">${s.avg_score ? parseFloat(s.avg_score).toFixed(1) : '-'}</div><div class="stat-label">Avg Score</div></div></div>`;
+        grid.appendChild(card);
       });
     }
 
@@ -282,82 +421,170 @@
       body.innerHTML = '';
       attempts.forEach(a => {
         const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${a.student_name}</td><td>${a.test_name}</td><td>${a.score}/${a.total}</td><td class="text-danger">${a.violations > 0 ? a.violations + ' ⚠️' : '-'}</td><td>${new Date(a.created_at).toLocaleString()}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadStudents() {
+      const res = await fetch('/api/students');
+      const students = await res.json();
+      const body = document.getElementById('studentsBody');
+      body.innerHTML = '';
+      students.forEach(s => {
+        const tr = document.createElement('tr');
+        const overallLink = `overall-certificate.html?student_id=${s.id}`;
         tr.innerHTML = `
-          <td>${a.student_name}</td>
-          <td>${a.student_id || ''}</td>
-          <td>${a.test_name}</td>
-          <td>${a.score}</td>
-          <td>${a.total}</td>
-          <td>${a.created_at}</td>
+          <td class="text-info">${s.reg_number || '-'}</td>
+          <td>${s.name}</td>
+          <td>${s.username}</td>
+          <td>
+            <a href="${overallLink}" target="_blank" class="btn btn-sm btn-outline-info">Overall Certificate</a>
+          </td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-danger border-0" onclick="deleteStudent(${s.id})">×</button>
+          </td>
         `;
         body.appendChild(tr);
       });
     }
 
+    async function deleteStudent(id) {
+      if (!confirm('Delete this student account? They will lose access.')) return;
+      await fetch(`/api/students/${id}`, { method: 'DELETE' });
+      loadStudents();
+    }
+
+    async function loadLive() {
+      const res = await fetch('/api/live');
+      const live = await res.json();
+      const body = document.getElementById('liveBody');
+      body.innerHTML = '';
+      if (live.length === 0) {
+        body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No active students right now.</td></tr>';
+        return;
+      }
+      live.forEach(l => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${l.student_name}</td><td>${l.test_name}</td><td>${new Date(l.created_at).toLocaleTimeString()}</td><td class="text-danger font-weight-bold">${l.violations}</td><td><span class="badge bg-success">Active</span></td>`;
+        body.appendChild(tr);
+      });
+    }
+
     function initAdmin() {
-      document.getElementById('updateAdminPhraseBtn').addEventListener('click', () => {
+      // Update Admin Password (SERVER SIDE)
+      document.getElementById('updateAdminPhraseBtn').addEventListener('click', async () => {
         const val = document.getElementById('adminPhraseSetting').value.trim();
         if (!val) {
           alert('Enter a new admin phrase');
           return;
         }
-        setAdminPassword(val);
-        document.getElementById('adminPhraseSetting').value = '';
-        alert('Admin phrase updated for this browser.');
-      });
-
-      document.getElementById('createTestBtn').addEventListener('click', async () => {
-        const name = document.getElementById('testName').value.trim();
-        const desc = document.getElementById('testDesc').value.trim();
-        if (!name) {
-          alert('Enter test name');
-          return;
-        }
-        await fetch('/api/tests', {
+        await fetch('/api/admin/update-password', {
           method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ name, description: desc })
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ password: val })
         });
-        document.getElementById('testName').value = '';
-        document.getElementById('testDesc').value = '';
-        await loadTests();
-        alert('Test created');
+        document.getElementById('adminPhraseSetting').value = '';
+        alert('Admin phrase updated globally (Server-Side).');
       });
 
+      // Create/Update Test
+      document.getElementById('createTestBtn').addEventListener('click', async () => {
+        const startVal = document.getElementById('testStartTime').value;
+        const endVal = document.getElementById('testEndTime').value;
+        let start_time = null;
+        let end_time = null;
+        if (startVal) {
+          const d = new Date(startVal);
+          start_time = d.toISOString();
+        }
+        if (endVal) {
+          const d = new Date(endVal);
+          end_time = d.toISOString();
+        }
+
+        const payload = { 
+          name: document.getElementById('testName').value, 
+          description: document.getElementById('testDesc').value,
+          instructions: document.getElementById('testInstructions').value,
+          duration_minutes: document.getElementById('testDuration').value,
+          type: document.getElementById('testType').value,
+          questions_per_attempt: document.getElementById('testSubset').value,
+          max_attempts: document.getElementById('testMaxAttempts').value,
+          access_key: document.getElementById('testAccessKey').value,
+          start_time,
+          end_time
+        };
+
+        const currentTestId = document.getElementById('testsList').value;
+        if (currentTestId) {
+          await fetch(`/api/tests/${currentTestId}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        } else {
+          await fetch('/api/tests', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        }
+        alert('Test saved');
+        loadTests();
+      });
+
+      // Import CSV
+      document.getElementById('importBtn').addEventListener('click', async () => {
+        const file = document.getElementById('importFile').files[0];
+        const testId = document.getElementById('testsList').value;
+        if (!file) return alert('Select a file');
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch(`/api/tests/${testId}/import`, { method: 'POST', body: fd });
+        const data = await res.json();
+        alert('Imported ' + data.count + ' questions');
+        loadTestDetails(testId);
+      });
+
+      // Add Question with Image
       document.getElementById('addQuestionBtn').addEventListener('click', async () => {
         const testId = document.getElementById('testsList').value;
-        const qText = document.getElementById('questionText').value.trim();
-        if (!qText) {
-          alert('Enter question text');
-          return;
-        }
-        const opts = [
-          document.getElementById('opt1').value.trim(),
-          document.getElementById('opt2').value.trim(),
-          document.getElementById('opt3').value.trim(),
-          document.getElementById('opt4').value.trim()
-        ];
-        const correct = parseInt(document.getElementById('correctOpt').value, 10) - 1;
+        const text = document.getElementById('questionText').value;
+        const marks = document.getElementById('questionMarks').value;
+        const file = document.getElementById('questionImage').files[0];
+        
+        const opts = [1,2,3,4].map(i => document.getElementById('opt'+i).value);
+        const correct = parseInt(document.getElementById('correctOpt').value) - 1;
+        const options = opts.map((t, i) => ({ text: t, is_correct: i === correct }));
 
-        const options = opts.map((t, idx) => ({
-          text: t,
-          is_correct: idx === correct
-        }));
+        const fd = new FormData();
+        fd.append('text', text);
+        fd.append('marks', marks);
+        fd.append('options', JSON.stringify(options));
+        if (file) fd.append('image', file);
 
-        await fetch(`/api/tests/${testId}/questions`, {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ text: qText, options })
-        });
-
-        document.getElementById('questionText').value = '';
-        ['opt1','opt2','opt3','opt4'].forEach(id => document.getElementById(id).value = '');
+        await fetch(`/api/tests/${testId}/questions`, { method: 'POST', body: fd });
         alert('Question added');
+        loadTestDetails(testId);
+        
+        // Reset fields
+        document.getElementById('questionText').value = '';
+        document.getElementById('questionImage').value = '';
+        [1,2,3,4].forEach(i => document.getElementById('opt'+i).value = '');
       });
 
+      document.getElementById('duplicateTestBtn').onclick = async () => {
+        const id = document.getElementById('testsList').value;
+        if(confirm('Duplicate?')) {
+          await fetch(`/api/tests/${id}/duplicate`, { method: 'POST' });
+          alert('Duplicated');
+          loadTests();
+        }
+      };
+
+      document.getElementById('deleteTestBtn').onclick = async () => {
+        const id = document.getElementById('testsList').value;
+        if(confirm('Delete?')) {
+          await fetch(`/api/tests/${id}`, { method: 'DELETE' });
+          loadTests();
+        }
+      };
+
       loadTests();
-      loadAttempts();
-      setInterval(loadAttempts, 10000);
+      setInterval(loadLive, 2000); // Fast Auto-refresh live monitor (2s)
     }
   </script>
 </body>

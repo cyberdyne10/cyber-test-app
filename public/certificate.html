@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Certificate of Completion</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    body {
+      background: #f8fafc;
+      color: #1e293b;
+      font-family: 'Times New Roman', serif;
+      padding: 40px;
+      display: flex;
+      justify-content: center;
+    }
+    .cert-frame {
+      width: 100%;
+      max-width: 800px;
+      border: 10px solid #0f172a;
+      padding: 10px;
+      background: #fff;
+    }
+    .cert-inner {
+      border: 2px solid #94a3b8;
+      padding: 40px;
+      text-align: center;
+      position: relative;
+    }
+    .cert-logo {
+      height: 80px;
+      margin-bottom: 20px;
+    }
+    .cert-title {
+      font-size: 3rem;
+      font-weight: bold;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+    }
+    .cert-subtitle {
+      font-size: 1.2rem;
+      color: #64748b;
+      margin-bottom: 40px;
+    }
+    .cert-body {
+      font-size: 1.4rem;
+      line-height: 1.8;
+      margin-bottom: 40px;
+    }
+    .student-name {
+      font-weight: bold;
+      font-size: 2rem;
+      border-bottom: 2px solid #cbd5e1;
+      padding-bottom: 5px;
+      display: inline-block;
+      min-width: 300px;
+      margin: 0 10px;
+      color: #0ea5e9;
+    }
+    .test-name {
+      font-weight: bold;
+      color: #0f172a;
+    }
+    .score-block {
+      margin-top: 20px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #0f172a;
+      border: 2px solid #0f172a;
+      display: inline-block;
+      padding: 10px 30px;
+      border-radius: 8px;
+    }
+    .cert-footer {
+      margin-top: 60px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-size: 1rem;
+    }
+    .signature {
+      width: 250px;
+      text-align: center;
+    }
+    .signature-line {
+      border-top: 1px solid #94a3b8;
+      width: 70%;
+      margin: 4px auto 8px auto;
+    }
+    .date-stamp {
+      font-family: monospace;
+      color: #64748b;
+    }
+    @media print {
+      body { background: none; padding: 0; }
+      .cert-frame { border: 5px solid #000; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="cert-frame">
+    <div class="cert-inner">
+      <img src="logo-cyber-logic.png" class="cert-logo" alt="Logo">
+      <div class="cert-title">Certificate of Completion</div>
+      <div class="cert-subtitle">Cyber-Logic Network Exam System</div>
+
+      <div class="cert-body">
+        This is to certify that<br>
+        <span class="student-name" id="sName">Student Name</span><br>
+        has successfully completed the assessment<br>
+        <span class="test-name" id="tName">Test Name</span>
+        
+        <div class="mt-4">
+          With a score of<br>
+          <div class="score-block" id="scoreVal">-- / --</div>
+        </div>
+      </div>
+
+      <div class="cert-footer">
+        <div class="text-start">
+          <div class="date-stamp" id="dateVal">Date: YYYY-MM-DD</div>
+          <div style="font-size:0.8rem; margin-top:5px;">ID: <span id="attId">#</span></div>
+        </div>
+        <div class="signature">
+          <img src="signature.png" style="height: 70px; display: block; margin: 0 auto 5px auto;">
+          <div class="signature-line"></div>
+          <div style="font-weight: bold; margin-bottom: 2px;">Engr. Lawrence Dimkpa</div>
+          <div style="font-size: 0.9rem; color: #64748b;">Instructor / Administrator</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="text-center mt-3 no-print">
+      <button onclick="window.print()" class="btn btn-primary">Print / Save as PDF</button>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const attemptId = params.get('attempt');
+
+    if (!attemptId) {
+      document.body.innerHTML = '<div class="text-center p-5">Invalid Certificate Link</div>';
+    } else {
+      fetch(`/api/attempts/${attemptId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            document.body.innerHTML = `<div class="text-center p-5">${data.error}</div>`;
+            return;
+          }
+          document.getElementById('sName').textContent = data.student_name;
+          document.getElementById('tName').textContent = data.test_name;
+          document.getElementById('scoreVal').textContent = `${data.score} / ${data.total}`;
+          document.getElementById('dateVal').textContent = 'Date: ' + new Date(data.created_at).toLocaleDateString();
+          document.getElementById('attId').textContent = '#' + data.id.toString().padStart(6, '0');
+        })
+        .catch(err => {
+          document.body.innerHTML = '<div class="text-center p-5">Error loading certificate.</div>';
+        });
+    }
+  </script>
+</body>
+</html>

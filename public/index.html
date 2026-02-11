@@ -6,6 +6,29 @@
   <title>Cyber Test – Student</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="style.css">
+  <style>
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-card {
+      background: #0f172a;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    }
+    .modal-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #fff; }
+    .hidden { display: none !important; }
+  </style>
 </head>
 <body>
   <div class="main-shell">
@@ -32,31 +55,39 @@
         </div>
       </div>
 
-      <div class="row-grid mb-3">
+      <div id="authStatus" class="mb-4 d-flex justify-content-between align-items-center" style="background:rgba(255,255,255,0.05); padding:0.5rem 1rem; border-radius:8px; display:none !important;">
         <div>
-          <div class="mb-3">
-            <label class="form-label">Student Name</label>
-            <input id="studentName" class="form-control" placeholder="e.g. Ada Lovelace" />
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Student ID (optional)</label>
-            <input id="studentId" class="form-control" placeholder="e.g. SEC-2025-042" />
+          <span>Welcome, <strong id="authName">Student</strong></span><br>
+          <div style="margin-top:2px;">
+            <span style="font-size:0.8rem; color: #94a3b8;">Reg No:</span>
+            <span id="authReg" class="fw-bold" style="font-size:0.95rem; color:#f97316 !important; letter-spacing:0.5px;">--</span>
           </div>
         </div>
-        <div>
+        <button id="logoutBtn" class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;">Logout</button>
+      </div>
+
+      <div class="row-grid mb-3">
+        <!-- Guest inputs removed. Login required. -->
+        <div id="guestInputs" class="text-center p-4 border rounded" style="background:rgba(15,23,42,0.6); border-color:rgba(56,189,248,0.2) !important;">
+          <p class="text-muted mb-3">Access to exams is restricted to registered students only.</p>
+          <button id="showLoginBtn" class="btn btn-fx-primary">Login or Register to Continue</button>
+        </div>
+
+        <div id="testSelectionArea" class="hidden">
           <div class="mb-3">
             <label class="form-label">Select Test</label>
             <select id="testSelect" class="form-select"></select>
           </div>
-          <div class="info-chip">
+          <div class="info-chip mb-2">
             <span class="label">Integrity</span>
             <span class="value">Randomized questions & options</span>
           </div>
+          <button id="startFullSessionBtn" class="btn btn-sm btn-outline-info">Start Full Exam Session (All Open Exams)</button>
         </div>
       </div>
 
       <div class="d-flex justify-content-between align-items-center mt-3 btn-row-stack">
-        <button id="startBtn" class="btn btn-fx-primary">
+        <button id="startBtn" class="btn btn-fx-primary hidden">
           <span class="pulse-dot"></span>
           <span>Start Secure Session</span>
         </button>
@@ -65,21 +96,216 @@
     </div>
   </div>
 
+  <!-- AUTH MODAL -->
+  <div id="authModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-title text-center">Student Access</div>
+      <ul class="nav nav-pills mb-3 justify-content-center" id="authTabs">
+        <li class="nav-item"><a class="nav-link active" id="tab-login" href="#">Login</a></li>
+        <li class="nav-item"><a class="nav-link" id="tab-register" href="#">Register</a></li>
+      </ul>
+      <form id="loginForm">
+        <div class="mb-3">
+          <label class="form-label">Username</label>
+          <input id="loginUser" class="form-control" required />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input type="password" id="loginPass" class="form-control" required />
+        </div>
+        <button type="submit" class="btn btn-fx-primary w-100">Login</button>
+      </form>
+      <form id="registerForm" class="hidden">
+        <div class="mb-3">
+          <label class="form-label">Full Name</label>
+          <input id="regName" class="form-control" required />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Username</label>
+          <input id="regUser" class="form-control" required />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input type="password" id="regPass" class="form-control" required />
+        </div>
+        <button type="submit" class="btn btn-fx-primary w-100">Register</button>
+      </form>
+      <button id="closeAuthModal" class="btn btn-sm btn-link text-muted w-100 mt-3">Cancel</button>
+    </div>
+  </div>
+
+  <!-- INSTRUCTIONS MODAL -->
+  <div id="instrModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-title">Exam Instructions</div>
+      <div id="instrText" class="mb-4 text-light" style="white-space: pre-wrap; font-size:0.9rem; line-height:1.5;"></div>
+      
+      <div id="accessKeySection" class="hidden mb-3">
+        <label class="form-label text-warning">Exam Locked</label>
+        <input id="inputAccessKey" type="password" class="form-control" placeholder="Enter Exam Access Key/PIN" />
+      </div>
+
+      <div class="d-flex gap-2">
+        <button id="confirmStartBtn" class="btn btn-fx-primary w-100">Begin Test</button>
+        <button id="cancelStartBtn" class="btn btn-fx-secondary w-100">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    let currentUser = null; 
+
+    function checkAuth() {
+      const stored = localStorage.getItem('cln_student_user');
+      if (stored) {
+        currentUser = JSON.parse(stored);
+        // Fix for stale data: if reg_number is missing, force re-login
+        if (!currentUser.reg_number) {
+          logout(); 
+          return;
+        }
+        showLoggedInState();
+      }
+    }
+
+    function showLoggedInState() {
+      document.getElementById('authStatus').style.setProperty('display', 'flex', 'important');
+      document.getElementById('authName').textContent = currentUser.name;
+      document.getElementById('authReg').textContent = currentUser.reg_number || 'Pending';
+      document.getElementById('guestInputs').style.display = 'none';
+      document.getElementById('testSelectionArea').classList.remove('hidden');
+      document.getElementById('startBtn').classList.remove('hidden');
+      const fullBtn = document.getElementById('startFullSessionBtn');
+      if (fullBtn) fullBtn.classList.remove('hidden');
+    }
+
+    function logout() {
+      localStorage.removeItem('cln_student_user');
+      location.reload();
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+
+    // Auth Modal Logic
+    const authModal = document.getElementById('authModal');
+    const tabLogin = document.getElementById('tab-login');
+    const tabRegister = document.getElementById('tab-register');
+    const loginForm = document.getElementById('loginForm');
+    const regForm = document.getElementById('registerForm');
+
+    document.getElementById('showLoginBtn').addEventListener('click', () => authModal.classList.remove('hidden'));
+    document.getElementById('closeAuthModal').addEventListener('click', () => authModal.classList.add('hidden'));
+
+    tabLogin.addEventListener('click', (e) => {
+      e.preventDefault();
+      tabLogin.classList.add('active');
+      tabRegister.classList.remove('active');
+      loginForm.classList.remove('hidden');
+      regForm.classList.add('hidden');
+    });
+
+    tabRegister.addEventListener('click', (e) => {
+      e.preventDefault();
+      tabRegister.classList.add('active');
+      tabLogin.classList.remove('active');
+      regForm.classList.remove('hidden');
+      loginForm.classList.add('hidden');
+    });
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('loginUser').value;
+      const password = document.getElementById('loginPass').value;
+      
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        currentUser = data.student;
+        localStorage.setItem('cln_student_user', JSON.stringify(currentUser));
+        showLoggedInState();
+        authModal.classList.add('hidden');
+      } else {
+        alert(data.error);
+      }
+    });
+
+    regForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('regName').value;
+      const username = document.getElementById('regUser').value;
+      const password = document.getElementById('regPass').value;
+
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ name, username, password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        currentUser = { id: data.id, name, username };
+        localStorage.setItem('cln_student_user', JSON.stringify(currentUser));
+        showLoggedInState();
+        authModal.classList.add('hidden');
+      } else {
+        alert(data.error);
+      }
+    });
+
+    // Test Selection Logic
+    let _availableTests = [];
+
     async function loadTests() {
       const res = await fetch('/api/tests');
       const tests = await res.json();
       const sel = document.getElementById('testSelect');
       sel.innerHTML = '';
+
       if (!tests.length) {
         const opt = document.createElement('option');
         opt.textContent = 'No tests configured yet';
         opt.disabled = true;
         opt.selected = true;
         sel.appendChild(opt);
+        _availableTests = [];
         return;
       }
+
+      const now = new Date();
+      const available = [];
+
       tests.forEach(t => {
+        const hasStart = !!t.start_time;
+        const hasEnd = !!t.end_time;
+        let isAvailable = true;
+
+        if (hasStart) {
+          const start = new Date(t.start_time);
+          if (start > now) isAvailable = false;
+        }
+        if (hasEnd) {
+          const end = new Date(t.end_time);
+          if (end < now) isAvailable = false;
+        }
+
+        if (isAvailable) available.push(t);
+      });
+
+      _availableTests = available.slice().sort((a, b) => a.id - b.id);
+
+      if (!_availableTests.length) {
+        const opt = document.createElement('option');
+        opt.textContent = 'No exams are currently open.';
+        opt.disabled = true;
+        opt.selected = true;
+        sel.appendChild(opt);
+        return;
+      }
+
+      _availableTests.forEach(t => {
         const opt = document.createElement('option');
         opt.value = t.id;
         opt.textContent = t.name;
@@ -87,27 +313,123 @@
       });
     }
 
-    document.getElementById('startBtn').addEventListener('click', () => {
-      const name = document.getElementById('studentName').value.trim();
-      if (!name) {
-        alert('Enter your name');
-        return;
+    const instrModal = document.getElementById('instrModal');
+    const confirmStartBtn = document.getElementById('confirmStartBtn');
+    const cancelStartBtn = document.getElementById('cancelStartBtn');
+    const accessKeySection = document.getElementById('accessKeySection');
+    const inputAccessKey = document.getElementById('inputAccessKey');
+
+    document.getElementById('startBtn').addEventListener('click', async () => {
+      let name = '';
+      let sid = '';
+      
+      if (currentUser) {
+        name = currentUser.name;
+        sid = 'REG-' + currentUser.id;
+      } else {
+        name = document.getElementById('studentName').value.trim();
+        sid = document.getElementById('studentId').value.trim();
+        if (!name) {
+          alert('Enter your name');
+          return;
+        }
       }
-      const studentId = document.getElementById('studentId').value.trim();
-      const testSelect = document.getElementById('testSelect');
-      if (!testSelect.value) {
+
+      const sel = document.getElementById('testSelect');
+      if (!sel.value) {
         alert('Select a test');
         return;
       }
-      const testId = testSelect.value;
-      const params = new URLSearchParams({
-        name,
-        id: studentId,
-        test: testId
-      });
-      window.location.href = 'test.html?' + params.toString();
+
+      const testId = sel.value;
+      
+      // Fetch fresh test info (instructions, lock status)
+      const resInfo = await fetch(`/api/tests/${testId}/info`);
+      const info = await resInfo.json();
+
+      document.getElementById('instrText').textContent = info.instructions || 'No special instructions.';
+      
+      // Handle access key
+      if (info.is_locked) {
+        accessKeySection.classList.remove('hidden');
+        inputAccessKey.value = '';
+      } else {
+        accessKeySection.classList.add('hidden');
+        inputAccessKey.value = ''; // clear just in case
+      }
+
+      instrModal.classList.remove('hidden');
+
+      confirmStartBtn.onclick = async () => {
+        const enteredKey = inputAccessKey.value;
+        
+        // Final Check with server (attempts + key)
+        const payload = {
+          student_name: name,
+          student_db_id: currentUser ? currentUser.id : null,
+          access_key: enteredKey
+        };
+
+        const checkRes = await fetch(`/api/tests/${testId}/check`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const checkData = await checkRes.json();
+
+        if (checkData.error) {
+          alert(checkData.error);
+          return; // Don't proceed
+        }
+
+        // All good, go to test
+        const params = new URLSearchParams({
+          name,
+          id: sid,
+          test: testId
+        });
+        if (currentUser) params.append('db_id', currentUser.id);
+        
+        // Pass access key if needed? No, backend validation on /full isn't implemented in this simplified flow, 
+        // but typically we'd use a token. 
+        // For now, assume /check was the gatekeeper.
+        
+        window.location.href = 'test.html?' + params.toString();
+      };
     });
 
+    cancelStartBtn.onclick = () => {
+      instrModal.classList.add('hidden');
+    };
+
+    // Start Full Exam Session (all open tests)
+    const fullSessionBtn = document.getElementById('startFullSessionBtn');
+    if (fullSessionBtn) {
+      fullSessionBtn.addEventListener('click', async () => {
+        if (!currentUser) {
+          alert('Login first to start a full exam session.');
+          return;
+        }
+        if (!_availableTests.length) {
+          alert('No exams are currently open.');
+          return;
+        }
+        const orderedIds = _availableTests.map(t => t.id);
+        const name = currentUser.name;
+        const sid = 'REG-' + currentUser.id;
+        const params = new URLSearchParams({
+          name,
+          id: sid,
+          test: orderedIds[0],
+          db_id: currentUser.id,
+          session: 'full',
+          order: orderedIds.join(',')
+        });
+        window.location.href = 'test.html?' + params.toString();
+      });
+    }
+
+    checkAuth();
     loadTests();
   </script>
 </body>

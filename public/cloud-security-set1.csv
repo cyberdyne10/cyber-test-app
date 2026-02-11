@@ -1,0 +1,47 @@
+Cloud Security Basics,
+1,Which term describes a model where a cloud provider delivers virtual machines and networking but you manage the OS and apps?,IaaS,SaaS,PaaS,FaaS,1
+1,Which cloud model delivers fully managed applications to end users over the internet?,SaaS,IaaS,PaaS,BPaaS,1
+1,In cloud security, what does "shared responsibility" mean?,Security duties are split between provider and customer,Only the provider is responsible for all security,Only the customer is responsible for all security,No one is responsible,1
+1,Which of these is a key risk of misconfigured cloud storage buckets?,Public exposure of sensitive data,Slower performance,Extra encryption,Higher DNS latency,1
+1,What is the main purpose of identity and access management (IAM) in cloud platforms?,Control who can do what on which resources,Compress cloud backups,Accelerate CPUs,Change IP addresses,1
+1,Which factor is MOST important when assigning IAM permissions?,Principle of least privilege,Using identical roles for everyone,Granting full admin by default,Ignoring logs,1
+1,What is a common way attackers gain access to cloud accounts?,Stolen or weak credentials,Faulty cables,Incorrect VLAN tagging,Wireless interference,1
+1,Multi-factor authentication (MFA) for cloud logins primarily protects against what?,Account takeover from stolen passwords,Switch failures,Power outages,DNS poisoning,1
+1,Which control helps detect suspicious activity in cloud environments?,Centralized logging and monitoring,Disabling logs,Using only static IPs,Using longer hostnames,1
+1,What should you do with unused cloud resources (VMs, storage, keys)?,Decommission or delete them,Keep them forever,Move them to public internet,Ignore them,1
+1,Which term describes encrypting data while it is stored in the cloud?,Encryption at rest,Encryption in transit,Encryption in use,Obfuscation,1
+1,Which term describes encrypting data as it travels across a network?,Encryption in transit,Encryption at rest,Tokenization,Sharding,1
+1,Why is key management critical in cloud encryption?,Losing keys means losing access to data,It increases bandwidth,It speeds up CPUs,It disables firewalls,1
+1,What is a common security benefit of using a cloud provider’s managed database service?,Automatic patching and backups,Unlimited free bandwidth,Guaranteed zero downtime,No authentication needed,1
+1,Which type of firewall is often used to filter traffic to and from cloud workloads?,Security group or network security group,Printer firewall,Personal firewall only,Email firewall,1
+1,What is the purpose of a web application firewall (WAF) in the cloud?,Protect web apps against attacks like SQL injection and XSS,Accelerate DNS,Encrypt disks,Manage IP addresses,1
+1,What is "shadow IT" in the context of cloud security?,Use of unauthorized cloud services by staff,Encrypted backups,Official IT policies,Physical access control,1
+1,Why is it risky for developers to use personal cloud accounts for work projects?,Company data may live outside official control,It improves security,It is required by cloud providers,It speeds up deployments,1
+1,Which best practice reduces blast radius if a cloud VM is compromised?,Use separate security groups and least privilege,Place all VMs in one open group,Disable all logging,Use one admin account for everything,1
+1,What is a cloud access security broker (CASB) used for?,Visibility and control over cloud application usage,Encrypting Wi‑Fi,Configuring switches,Managing print jobs,1
+1,Which log should you review first after suspicious admin actions in a cloud console?,Audit / activity log,Print logs,DHCP logs,Temperature logs,1
+1,Why is region selection important for cloud security and compliance?,Data residency and legal requirements vary by region,It changes CPU speed,It controls VLAN IDs,It sets Wi‑Fi channels,1
+1,What is the purpose of tagging cloud resources?,Organization, cost tracking, and sometimes policy control,Increasing bandwidth,Encrypting data,Creating VLANs,1
+1,What should you do before exposing a cloud VM directly to the internet?,Harden it and restrict ports with a firewall,Enable all ports,Disable logging,Use default credentials,1
+1,Which tool can help detect public exposure of cloud storage buckets?,Cloud security posture management (CSPM),Word processor,Spreadsheet,Antivirus only,1
+1,What is a common risk of using public AMIs or images from unknown publishers?,Embedded malware or backdoors,Better performance,More storage,Improved encryption,1
+1,Why is auto-scaling relevant to security?,It can absorb traffic during attacks but must be controlled to avoid abuse,It replaces firewalls,It encrypts all traffic,It patches systems automatically,1
+1,What is "least privilege" in the context of IAM roles?,Grant only necessary permissions for a task,Grant all permissions for convenience,Grant no permissions ever,Grant permissions randomly,1
+1,What should you regularly review for cloud IAM users and roles?,Access keys and assigned policies,Screen resolution,Printer names,Cable colors,1
+1,Why is it dangerous to use long-lived access keys in cloud environments?,They can be stolen and used for a long time,They reduce CPU usage,They speed up routing,They are required by compliance,1
+1,What is the best way to allow developers to access production logs securely?,Through role-based access and audit logging,Give everyone SSH root access,Email log files,Disable logs,1
+1,What does "infrastructure as code" (IaC) help with from a security perspective?,Consistent, reviewable, version-controlled configurations,Random manual changes,Unlogged changes,Fewer backups,1
+1,Why should security groups be reviewed regularly?,To remove overly permissive rules like 0.0.0.0/0,To increase IP address usage,To reduce encryption,To disable backups,1
+1,What does "0.0.0.0/0" mean in a cloud security group?,Open to the entire internet,Open to local subnet only,Open to one host only,Blocked to all,1
+1,Which cloud feature helps prevent accidental deletion of critical storage objects?,Versioning and deletion protection,Using bigger instances,Static routing,MAC filtering,1
+1,Which service is commonly used to centralize logs in cloud environments?,Cloud-native logging service (e.g. CloudWatch/Stackdriver),Spreadsheet,FTP server,Print server,1
+1,Why is monitoring billing in cloud important for security?,Unusual cost spikes may indicate abuse or compromise,It speeds up servers,It replaces firewalls,It increases bandwidth,1
+1,What should you do when an API key is suspected to be compromised?,Revoke/rotate it immediately and investigate,Ignore it,Share it,Post it online,1
+1,What is a common way to restrict management access to cloud consoles?,Use MFA, IP restrictions, and role-based access,Allow anonymous logins,Disable passwords,Use guest accounts,1
+1,Which option describes "serverless" security responsibility?,You secure the code and configuration; provider secures runtime,Provider secures everything including your code,You secure only the hardware,No security needed,1
+1,Why should you scan container images used in the cloud?,To detect vulnerabilities and malware before deployment,To speed up containers,To reduce CPU usage,To avoid backups,1
+1,What is "data classification" in cloud security?,Labeling data by sensitivity to apply proper controls,Compressing data,Encrypting only backups,Renaming files,1
+1,Why is continuous compliance monitoring important in cloud?,Configurations change quickly and may drift from standards,It slows down the cloud,It prevents backups,It disables MFA,1
+1,Which approach helps prevent credential stuffing against cloud logins?,MFA, rate limiting, and anomaly detection,Using shared accounts,Disabling logging,Using default passwords,1
+1,What is the best way to give a third-party vendor access to a specific cloud resource?,Create a limited role and use federation,Share your root account credentials,Open all ports,Disable IAM,1
+1,Which control helps ensure that new cloud resources follow security best practices by default?,Secure baseline templates or guardrails,Manual changes only,Unrestricted access,Random configurations,1

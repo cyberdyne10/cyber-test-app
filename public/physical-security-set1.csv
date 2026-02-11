@@ -1,0 +1,46 @@
+Physical Security – Set 1,
+1,What is the main goal of physical security?,Protect people, facilities, and equipment from physical threats,Increase screen resolution,Change VLANs,Upgrade bandwidth,1
+1,Which of these is an example of a physical security control?,Door access card system,Antivirus software,Firewall rules,DHCP server,1
+1,Why are server rooms typically locked and access-controlled?,To prevent unauthorized physical access to critical equipment,To increase temperature,To reduce Wi‑Fi,To change IPs,1
+1,What is a mantrap in physical security?,A small room with two interlocking doors to control entry,A type of malware,A wireless protocol,A cable type,1
+1,Why is CCTV used in physical security?,Monitoring and recording activities for deterrence and evidence,Improving Wi‑Fi,Encrypting data,Increasing CPU speed,1
+1,What is tailgating in physical security?,Following someone through a secure door without authorization,Using tail cables,Extending VLANs,Changing DNS,1
+1,How can tailgating be reduced?,Security awareness and enforcing badge use,Increasing bandwidth,Changing OS,Disabling locks,1
+1,Why should visitor access be controlled and logged?,For accountability and safety,To reduce lighting,To increase sales,To change branding,1
+1,What is a security badge used for?,Identify and grant/restrict access to areas,Encrypt traffic,Change passwords,Control printers,1
+1,Which physical control helps protect against fire?,Fire suppression and extinguishers,Antivirus,Firewall,IDS,1
+1,Why should server racks be locked?,Prevent unauthorized tampering with devices,Increase heat,Change cables,Reduce logs,1
+1,What is environmental monitoring in physical security?,Tracking temperature, humidity, and other conditions,Monitoring tweets,Monitoring emails,Monitoring printers,1
+1,Why are UPS (Uninterruptible Power Supplies) important?,Provide temporary power to critical systems during outages,Increase CPU speed,Encrypt disks,Change VLANs,1
+1,Why should backup media be stored in a secure location?,To protect against theft and damage,To speed up Wi‑Fi,To change fonts,To reduce logs,1
+1,Which physical security measure helps control vehicle access?,Gates and barriers,Antivirus software,VPN,IDS,1
+1,What is access control?,Mechanism to permit or deny entry to an area or system,Backup method,Routing protocol,DNS service,1
+1,Why is it risky to leave sensitive documents on desks?,They may be viewed or stolen by unauthorized persons,They slow computers,They change IPs,They reduce power,1
+1,What is a clean desk policy?,Rule requiring sensitive materials to be stored when not in use,Rule to clean computers daily,Rule about lunch breaks,Rule for cleaning floors,1
+1,Why should lost or stolen access cards be reported immediately?,To revoke access and prevent misuse,To increase limits,To change OS,To get new laptops,1
+1,Which measure helps secure laptops in public or open offices?,Cable locks and secure storage,Turning brightness down,Using large bags,Disabling Wi‑Fi,1
+1,Why is physical security important for information security?,Physical access can bypass technical controls,It increases bandwidth,It changes passwords,It reduces logs,1
+1,What is a security guard’s main role in physical security?,Monitor, control access, and respond to incidents,Configure routers,Manage backups,Write code,1
+1,Why are emergency exits important?,Enable safe evacuation during emergencies,Increase AC,Reduce costs,Improve internet,1
+1,Why must emergency exits remain unobstructed?,Blocked exits can trap occupants during emergencies,They reduce power usage,They increase AC,They improve design,1
+1,What is the purpose of an access control log?,Record who entered and exited secure areas,Measure internet usage,Track CPU,Monitor RAM,1
+1,Why is lighting important in physical security?,Well-lit areas deter intruders and improve visibility,Reduce power usage,Improve screens,Increase CPU,1
+1,Why should server room keys be restricted?,Prevent unauthorized users from entering,Increase room size,Improve Wi‑Fi,Change layouts,1
+1,What is the purpose of visitor badges?,Identify visitors and their authorization level,Increase salary,Reduce heat,Improve screens,1
+1,Why is it important to escort visitors?,Ensure they do not access unauthorized areas,Make them feel welcome,Increase walking,Reduce calls,1
+1,What is the primary risk of unattended delivery packages?,They may be tampered with or used to smuggle devices,They reduce printing,They increase power,They change Wi‑Fi,1
+1,Why are physical inventories of assets important?,Know where equipment is and detect missing items,Reduce assets,Increase memory,Change brands,1
+1,Why should doors to secure areas not be propped open?,Bypasses access controls, enabling unauthorized entry,Increase AC,Reduce noise,Improve design,1
+1,What is a badge reader?,Device used to read access cards,Device to check temperature,Network switch,Wi‑Fi router,1
+1,Why is physical access to backup tapes or drives sensitive?,They may contain full copies of critical data,They increase heat,They reduce bandwidth,They change OS,1
+1,What is the goal of perimeter security?,Protect the outer boundary of a site or building,Protect only desktops,Change IP addresses,Monitor printers,1
+1,Which of the following is a simple but effective physical security control?,Locking doors and cabinets,Changing wallpaper,Updating apps,Using themes,1
+1,Why should garbage or recycling be checked for sensitive documents?,To avoid information leakage from trash,To increase waste,To reduce recycling,To change bins,1
+1,What are security zones?,Areas grouped by required level of access,Types of Wi‑Fi,Types of VLANs,Types of cables,1
+1,Why should equipment disposal be controlled?,Devices may contain sensitive data,They are expensive,They are heavy,They are noisy,1
+1,Why is physical security awareness training important?,Staff behavior affects physical risk,Increase fitness,Reduce sleep,Change clothes,1
+1,What is a visitor log?,Record of who visited, when, and whom they met,Schedule of cleaners,Backup log,Print log,1
+1,Why should staff challenge unknown persons in secure areas?,To verify they are authorized to be there,To be unfriendly,To increase noise,To reduce work,1
+1,Why is door alarm useful?,Alert when doors are forced or left open,Increase AC,Reduce light,Change sound,1
+1,What is the purpose of a security fence?,Define boundary and deter unauthorized entry,Improve Wi‑Fi,Carry cables,Block sun only,1
+1,Why should physical security controls be regularly tested?,Ensure they function properly when needed,Increase cost,Change models,Reduce staff,1

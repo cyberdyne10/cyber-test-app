@@ -1,0 +1,47 @@
+Identity and Access Management – Set 1,
+1,What does IAM stand for?,Identity and Access Management,Internet Access Management,Internal Account Monitoring,Identity and Audit Management,1
+1,What is the main purpose of IAM?,Ensure the right people have the right access at the right time,Increase bandwidth,Change IP addresses,Improve screen color,1
+1,What is authentication?,Verifying the identity of a user or system,Granting file permissions,Encrypting data,Backing up data,1
+1,What is authorization?,Determining what an authenticated user is allowed to do,Checking password strength,Encrypting traffic,Rebooting servers,1
+1,Which of these is a factor in multi-factor authentication (MFA)?,Something you know,Something you forgot,Something you deleted,Something you bought,1
+1,Which is an example of "something you are"?,Fingerprint,Birthday,Username,Email address,1
+1,Why is MFA strongly recommended for privileged accounts?,Reduces risk of account takeover,Speeds login only,Reduces logs,Changes VLANs,1
+1,What is a role-based access control (RBAC)?,Assign permissions based on job roles,Assign permissions randomly,Assign all permissions to everyone,Remove all permissions,1
+1,Why is the principle of least privilege important in IAM?,Limits damage if an account is compromised,Improves graphics,Increases marketing,Changes logos,1
+1,What is single sign-on (SSO)?,Use one authentication to access multiple systems,Use many passwords for one system,Disable authentication,Use local admin only,1
+1,Why is account provisioning important?,Ensures users get necessary access when they join,Change screen resolution,Change colors,Improve music,1
+1,What is deprovisioning?,Removing access when users leave or change roles,Creating new accounts,Backing up data,Encrypting disks,1
+1,Why is timely deprovisioning critical?,Reduces risk from orphaned accounts,Improves internet speed,Changes UI,Reduces CPU,1
+1,What is an identity provider (IdP)?,System that authenticates users and issues identity tokens,Firewall,Switch,Printer,1
+1,Which protocol is commonly used for federated identity SSO?,SAML,SMTP,DHCP,FTP,1
+1,Why are shared user accounts discouraged?,Difficult to attribute actions to individuals,They are cheaper,They increase speed,They improve UI,1
+1,What is password complexity policy?,Rules that define the strength requirements for passwords,Rules for screen brightness,Rules for Wi‑Fi,Rules for printing,1
+1,Why should default passwords be changed?,They are widely known and often published,They increase security,They reduce cost,They improve graphics,1
+1,What is account lockout policy used for?,Thwart brute-force login attempts,Speed up logins,Reduce disk usage,Change IPs,1
+1,Why should admin accounts be separate from normal user accounts?,Reduces risk when users browse and read email,Increases cost,Decreases speed,Improves colors,1
+1,What is privilege creep?,Accumulation of access rights over time,Loss of privileges,Risk of falling,Network latency,1
+1,How can privilege creep be reduced?,Regular access reviews and role adjustments,Ignore all roles,Give everyone admin,Never change access,1
+1,What is an access review or certification?,Periodic check of who has what access,Hardware audit only,Printer test,Network scan,1
+1,Why is identity lifecycle management important?,Controls access from joiner to leaver,Changes screen color,Improves fans,Reduces noise,1
+1,What is "just-in-time" (JIT) access?,Temporary elevated access granted only when needed,Always-on admin access,No access ever,Random access,1
+1,Why is logging of authentication and authorization events important?,Support investigations and detect anomalies,Reduce CPU,Change OS,Change colors,1
+1,What is a service account?,Account used by applications or services,CEO account,Default guest,Anonymous user,1
+1,Why must service accounts be protected carefully?,They may have high privileged access,They are unimportant,They change logos,They speed Wi‑Fi,1
+1,What is "credential stuffing"?,Using stolen passwords from one site to try others,Stuffing data into logs,Compressing credentials,Hashing passwords,1
+1,Which measure helps prevent credential stuffing?,MFA and rate limiting,Using simple passwords,Sharing credentials,Disabling logging,1
+1,Why should admins avoid logging in interactively with highly privileged accounts?,Increases risk of compromise on daily usage,Improves theme,Changes audio,Improves photos,1
+1,What is "identity federation"?,Trusting external IdPs to authenticate users,Creating local accounts only,Disabling auth,Using shared passwords,1
+1,Why is strong identity proofing important when issuing credentials?,Ensure accounts belong to the correct individuals,Increase brightness,Change chairs,Improve AC,1
+1,What is least privilege for service accounts?,Give only permissions needed for the service,Give domain admin,Give no permissions,Give random permissions,1
+1,What does "step-up authentication" mean?,Requiring stronger auth for sensitive actions,Reducing auth for speed,Disabling MFA,Changing passwords,1
+1,Why should access to IAM admin console be tightly controlled?,It can change access for the whole environment,It changes font,It changes theme,It prints logs,1
+1,What is "identity store"?,Database of user identities and attributes,Firewall rule set,Printer queue,Router config,1
+1,Why should password reuse across systems be avoided?,Compromise of one system can impact others,Improves memory,Improves CPU,Changes wallpaper,1
+1,What is "role mining"?,Analyzing permissions to design proper roles,Mining hardware,Creating coins,Digging holes,1
+1,Why is fine-grained authorization beneficial?,Allows precise control of who can do what,Confuses users,Increases colors,Reduces speed,1
+1,What is adaptive authentication?,Adjusting auth requirements based on risk factors,Disabling auth,Using same auth always,Random auth,1
+1,Why should privileged sessions be monitored?,Detect misuse or suspicious admin actions,Reduce logs,Change colors,Improve sound,1
+1,What is a "break-glass" account?,Emergency admin account with strict controls,Normal user account,Guest account,Service account,1
+1,Why must break-glass accounts be tightly controlled and monitored?,They hold high power for emergencies,They are slow,They are pretty,They are unused,1
+1,What does "SSO" primarily improve?,User experience and central auth,Network speed,Graphics,Storage,1
+1,Why should identity data be protected like other sensitive data?,Compromise can lead to impersonation,Improve music,Improve screens,Change desks,1

@@ -3,31 +3,155 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const db = require('./db');
 const path = require('path');
+const multer = require('multer');
+const fs = require('fs');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Setup Uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = 'public/uploads';
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname.replace(/[^a-z0-9.]/gi, '_'));
+  }
+});
+const upload = multer({ storage: storage });
+
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Simple CORS for local testing
+// Simple CORS
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   next();
+});
+
+// Helper to generate Reg Number
+function generateRegNumber(id) {
+  const year = new Date().getFullYear();
+  const paddedId = id.toString().padStart(3, '0');
+  const hex = '0x' + crypto.randomBytes(2).toString('hex').toUpperCase();
+  return `CYBLN-${year}-${paddedId}-${hex}`;
+}
+
+// Helper: Shuffle array
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+// ADMIN AUTH ROUTES
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body;
+  db.get("SELECT value FROM admin_settings WHERE key = 'password'", (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const currentPwd = row ? row.value : 'CyberAdmin2025!';
+    if (password === currentPwd) {
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ error: 'Incorrect password' });
+    }
+  });
+});
+
+app.post('/api/admin/update-password', (req, res) => {
+  const { password } = req.body;
+  db.run("INSERT OR REPLACE INTO admin_settings (key, value) VALUES ('password', ?)", [password], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+// STUDENT AUTH ROUTES
+app.post('/api/auth/register', (req, res) => {
+  const { name, username, password } = req.body;
+  if (!name || !username || !password) return res.status(400).json({ error: 'Missing fields' });
+  
+  db.run('INSERT INTO students (name, username, password) VALUES (?, ?, ?)', [name, username, password], function(err) {
+    if (err) return res.status(400).json({ error: 'Username likely taken' });
+    
+    const studentId = this.lastID;
+    const regNum = generateRegNumber(studentId);
+    
+    db.run('UPDATE students SET reg_number = ? WHERE id = ?', [regNum, studentId], (err2) => {
+      if (err2) console.error('Error setting reg number', err2);
+      res.json({ success: true, id: studentId, name, username, reg_number: regNum });
+    });
+  });
+});
+
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body;
+  db.get('SELECT * FROM students WHERE username = ? AND password = ?', [username, password], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(401).json({ error: 'Invalid credentials' });
+    
+    if (!row.reg_number) {
+      const newReg = generateRegNumber(row.id);
+      db.run('UPDATE students SET reg_number = ? WHERE id = ?', [newReg, row.id]);
+      row.reg_number = newReg;
+    }
+    
+    res.json({ success: true, student: { id: row.id, name: row.name, username: row.username, reg_number: row.reg_number } });
+  });
+});
+
+app.get('/api/student/:id/history', (req, res) => {
+  db.all(
+    `SELECT a.*, t.name as test_name, t.id as test_id
+     FROM attempts a 
+     JOIN tests t ON a.test_id = t.id 
+     WHERE a.student_db_id = ? 
+     ORDER BY a.created_at DESC`, 
+    [req.params.id], 
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
+// List all students
+app.get('/api/students', (req, res) => {
+  db.all('SELECT id, name, username, reg_number FROM students ORDER BY id DESC', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// Delete Student
+app.delete('/api/students/:id', (req, res) => {
+  const studentId = req.params.id;
+  // Optional: Also delete their attempts? For now, we keep attempts for record but unlink them or just delete student.
+  // Better to keep attempts but student gone. Or delete attempts too.
+  // Let's delete student only. Attempts will remain with student_id string but student_db_id will point to nothing.
+  db.run('DELETE FROM students WHERE id = ?', [studentId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
 });
 
 /**
  * ADMIN ROUTES
  */
 
-// Create a test
+// Create a test (updated for type and schedule)
 app.post('/api/tests', (req, res) => {
-  const { name, description } = req.body;
+  const { name, description, duration_minutes, questions_per_attempt, instructions, max_attempts, access_key, type, start_time, end_time } = req.body;
   db.run(
-    'INSERT INTO tests (name, description) VALUES (?, ?)',
-    [name, description || ''],
+    'INSERT INTO tests (name, description, duration_minutes, questions_per_attempt, instructions, max_attempts, access_key, type, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [name, description || '', duration_minutes || null, questions_per_attempt || null, instructions || '', max_attempts || null, access_key || null, type || 'exam', start_time || null, end_time || null],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ id: this.lastID, name, description });
@@ -35,7 +159,6 @@ app.post('/api/tests', (req, res) => {
   );
 });
 
-// List tests
 app.get('/api/tests', (req, res) => {
   db.all('SELECT * FROM tests', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -43,105 +166,6 @@ app.get('/api/tests', (req, res) => {
   });
 });
 
-// Add question with options
-app.post('/api/tests/:testId/questions', (req, res) => {
-  const testId = req.params.testId;
-  const { text, options } = req.body; // options: [{text, is_correct}, ...]
-
-  db.run(
-    'INSERT INTO questions (test_id, text) VALUES (?, ?)',
-    [testId, text],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      const questionId = this.lastID;
-
-      const stmt = db.prepare(
-        'INSERT INTO options (question_id, text, is_correct) VALUES (?, ?, ?)'
-      );
-      for (const opt of options) {
-        stmt.run(questionId, opt.text, opt.is_correct ? 1 : 0);
-      }
-      stmt.finalize(err2 => {
-        if (err2) return res.status(500).json({ error: err2.message });
-        res.json({ id: questionId, test_id: testId, text });
-      });
-    }
-  );
-});
-
-/**
- * STUDENT ROUTES
- */
-
-// Get raw questions + options for admin editing
-app.get('/api/tests/:testId/questions-full', (req, res) => {
-  const testId = req.params.testId;
-  db.all(
-    `SELECT q.id as question_id, q.text as question_text,
-            o.id as option_id, o.text as option_text, o.is_correct
-     FROM questions q
-     JOIN options o ON q.id = o.question_id
-     WHERE q.test_id = ?
-     ORDER BY q.id ASC, o.id ASC`,
-    [testId],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      const questions = {};
-      rows.forEach(r => {
-        if (!questions[r.question_id]) {
-          questions[r.question_id] = {
-            id: r.question_id,
-            text: r.question_text,
-            options: []
-          };
-        }
-        questions[r.question_id].options.push({
-          id: r.option_id,
-          text: r.option_text,
-          is_correct: r.is_correct === 1
-        });
-      });
-      res.json(Object.values(questions));
-    }
-  );
-});
-
-// Update question text and options
-app.post('/api/questions/:questionId/update', (req, res) => {
-  const questionId = req.params.questionId;
-  const { text, options } = req.body; // options: [{id, text, is_correct}]
-
-  db.run(
-    'UPDATE questions SET text = ? WHERE id = ?',
-    [text, questionId],
-    err => {
-      if (err) return res.status(500).json({ error: err.message });
-
-      const stmt = db.prepare('UPDATE options SET text = ?, is_correct = ? WHERE id = ?');
-      for (const opt of options) {
-        stmt.run(opt.text, opt.is_correct ? 1 : 0, opt.id);
-      }
-      stmt.finalize(err2 => {
-        if (err2) return res.status(500).json({ error: err2.message });
-        res.json({ success: true });
-      });
-    }
-  );
-});
-
-// Delete question and its options
-app.delete('/api/questions/:questionId', (req, res) => {
-  const questionId = req.params.questionId;
-  db.run('DELETE FROM options WHERE question_id = ?', [questionId], err => {
-    if (err) return res.status(500).json({ error: err.message });
-    db.run('DELETE FROM questions WHERE id = ?', [questionId], err2 => {
-      if (err2) return res.status(500).json({ error: err2.message });
-      res.json({ success: true });
-    });
-  });
-});
-
-// Delete entire test and its questions/options
 app.delete('/api/tests/:testId', (req, res) => {
   const testId = req.params.testId;
   db.run('DELETE FROM options WHERE question_id IN (SELECT id FROM questions WHERE test_id = ?)', [testId], err => {
@@ -156,106 +180,417 @@ app.delete('/api/tests/:testId', (req, res) => {
   });
 });
 
-// Get test with questions + options
-app.get('/api/tests/:testId/full', (req, res) => {
+app.post('/api/tests/:testId/duplicate', (req, res) => {
   const testId = req.params.testId;
+  db.get('SELECT * FROM tests WHERE id = ?', [testId], (err, test) => {
+    if (err || !test) return res.status(404).json({ error: 'Test not found' });
+    const newName = test.name + ' (Copy)';
+    db.run(
+      'INSERT INTO tests (name, description, duration_minutes, questions_per_attempt, instructions, max_attempts, access_key, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [newName, test.description, test.duration_minutes, test.questions_per_attempt, test.instructions, test.max_attempts, test.access_key, test.type],
+      function (err2) {
+        if (err2) return res.status(500).json({ error: err2.message });
+        const newTestId = this.lastID;
+        db.all('SELECT * FROM questions WHERE test_id = ?', [testId], (err3, questions) => {
+          if (err3) return res.status(500).json({ error: err3.message });
+          if (questions.length === 0) return res.json({ success: true, id: newTestId, name: newName });
+          let completed = 0;
+          questions.forEach(q => {
+            db.run('INSERT INTO questions (test_id, text, marks, image_url) VALUES (?, ?, ?, ?)', [newTestId, q.text, q.marks, q.image_url], function(errQ) {
+              const newQId = this.lastID;
+              db.all('SELECT * FROM options WHERE question_id = ?', [q.id], (errO, opts) => {
+                const stmt = db.prepare('INSERT INTO options (question_id, text, is_correct) VALUES (?, ?, ?)');
+                opts.forEach(o => stmt.run(newQId, o.text, o.is_correct));
+                stmt.finalize(() => {
+                  completed++;
+                  if (completed === questions.length) { res.json({ success: true, id: newTestId, name: newName }); }
+                });
+              });
+            });
+          });
+        });
+      }
+    );
+  });
+});
 
+// Analytics
+app.get('/api/analytics', (req, res) => {
   db.all(
-    `SELECT q.id as question_id, q.text as question_text,
-            o.id as option_id, o.text as option_text
+    `SELECT t.id, t.name, 
+            COUNT(a.id) as attempts, 
+            AVG(a.score) as avg_score, 
+            AVG(a.total) as avg_total
+     FROM tests t
+     LEFT JOIN attempts a ON t.id = a.test_id AND a.status = 'submitted'
+     GROUP BY t.id`,
+    [],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
+// Live Monitoring
+app.get('/api/live', (req, res) => {
+  db.all(
+    `SELECT a.id, a.student_name, t.name as test_name, a.created_at, a.violations
+     FROM attempts a
+     JOIN tests t ON a.test_id = t.id
+     WHERE a.status = 'in-progress' 
+     AND a.created_at >= datetime('now', '-3 hours')
+     ORDER BY a.created_at DESC`,
+    [],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
+// CSV Export
+app.get('/api/export/csv', (req, res) => {
+  const testId = req.query.test_id;
+  let sql = `SELECT a.id, a.student_name, a.student_id, t.name as test_name, a.score, a.total, a.created_at, a.violations 
+             FROM attempts a JOIN tests t ON a.test_id = t.id WHERE a.status = 'submitted'`;
+  const params = [];
+  if (testId) { sql += ' AND a.test_id = ?'; params.push(testId); }
+  sql += ' ORDER BY a.created_at DESC';
+
+  db.all(sql, params, (err, rows) => {
+    if (err) return res.status(500).send('Error');
+    let csv = 'Attempt ID,Student Name,Student ID,Test Name,Score,Total,Date,Violations\n';
+    rows.forEach(r => {
+      csv += `${r.id},"${r.student_name}","${r.student_id || ''}","${r.test_name}",${r.score},${r.total},"${r.created_at}",${r.violations}\n`;
+    });
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="exam_results.csv"');
+    res.send(csv);
+  });
+});
+
+// Bulk Import
+app.post('/api/tests/:testId/import', upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file' });
+  const testId = req.params.testId;
+  const content = fs.readFileSync(req.file.path, 'utf8');
+  
+  // Format: Text,Mark,Option1,Option2,Option3,Option4,CorrectIndex(1-4)
+  const lines = content.split('\n');
+  let count = 0;
+  
+  lines.forEach(line => {
+    const parts = line.split(','); // simple split, not robust csv
+    if (parts.length >= 7) {
+      const text = parts[0].trim();
+      const mark = parseInt(parts[1]) || 1;
+      const options = [parts[2], parts[3], parts[4], parts[5]].map(s => s.trim());
+      const correctIdx = parseInt(parts[6]) - 1; // 1-based csv to 0-based
+
+      if (text) {
+        db.run('INSERT INTO questions (test_id, text, marks) VALUES (?, ?, ?)', [testId, text, mark], function(e) {
+          if (!e) {
+            const qId = this.lastID;
+            const stmt = db.prepare('INSERT INTO options (question_id, text, is_correct) VALUES (?, ?, ?)');
+            options.forEach((opt, idx) => {
+              stmt.run(qId, opt, idx === correctIdx ? 1 : 0);
+            });
+            stmt.finalize();
+          }
+        });
+        count++;
+      }
+    }
+  });
+  
+  fs.unlinkSync(req.file.path);
+  res.json({ success: true, count });
+});
+
+// Questions with Images
+app.post('/api/tests/:testId/questions', upload.single('image'), (req, res) => {
+  const testId = req.params.testId;
+  const text = req.body.text;
+  const marks = req.body.marks || 1;
+  let options = [];
+  try { options = JSON.parse(req.body.options); } catch(e) {}
+
+  const imageUrl = req.file ? '/uploads/' + req.file.filename : null;
+
+  db.run('INSERT INTO questions (test_id, text, marks, image_url) VALUES (?, ?, ?, ?)', [testId, text, marks, imageUrl], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    const questionId = this.lastID;
+    const stmt = db.prepare('INSERT INTO options (question_id, text, is_correct) VALUES (?, ?, ?)');
+    for (const opt of options) { stmt.run(questionId, opt.text, opt.is_correct ? 1 : 0); }
+    stmt.finalize(err2 => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ id: questionId, test_id: testId, text });
+    });
+  });
+});
+
+app.get('/api/tests/:testId/questions-full', (req, res) => {
+  const testId = req.params.testId;
+  db.all(
+    `SELECT q.id as question_id, q.text as question_text, q.marks, q.image_url,
+            o.id as option_id, o.text as option_text, o.is_correct
      FROM questions q
      JOIN options o ON q.id = o.question_id
-     WHERE q.test_id = ?`,
+     WHERE q.test_id = ?
+     ORDER BY q.id ASC, o.id ASC`,
     [testId],
     (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
       const questions = {};
       rows.forEach(r => {
         if (!questions[r.question_id]) {
-          questions[r.question_id] = {
-            id: r.question_id,
-            text: r.question_text,
-            options: []
-          };
+          questions[r.question_id] = { id: r.question_id, text: r.question_text, marks: r.marks, image_url: r.image_url, options: [] };
         }
-        questions[r.question_id].options.push({
-          id: r.option_id,
-          text: r.option_text
-        });
+        questions[r.question_id].options.push({ id: r.option_id, text: r.option_text, is_correct: r.is_correct === 1 });
       });
       res.json(Object.values(questions));
     }
   );
 });
 
-// Submit answers and auto-mark
+app.post('/api/questions/:questionId/update', (req, res) => {
+  const questionId = req.params.questionId;
+  const { text, marks, options } = req.body; 
+  db.run('UPDATE questions SET text = ?, marks = ? WHERE id = ?', [text, marks || 1, questionId], err => {
+    if (err) return res.status(500).json({ error: err.message });
+    const stmt = db.prepare('UPDATE options SET text = ?, is_correct = ? WHERE id = ?');
+    for (const opt of options) { if (opt.id) stmt.run(opt.text, opt.is_correct ? 1 : 0, opt.id); }
+    stmt.finalize(err2 => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ success: true });
+    });
+  });
+});
+
+app.delete('/api/questions/:questionId', (req, res) => {
+  const questionId = req.params.questionId;
+  db.run('DELETE FROM options WHERE question_id = ?', [questionId], err => {
+    if (err) return res.status(500).json({ error: err.message });
+    db.run('DELETE FROM questions WHERE id = ?', [questionId], err2 => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ success: true });
+    });
+  });
+});
+
+// Check eligibility (Attempts + Access Key + Schedule)
+app.post('/api/tests/:testId/check', (req, res) => {
+  const testId = req.params.testId;
+  const { student_name, student_db_id, access_key } = req.body;
+
+  db.get('SELECT * FROM tests WHERE id = ?', [testId], (err, test) => {
+    if (err || !test) return res.status(404).json({ error: 'Test not found' });
+
+    // Check Schedule
+    const now = new Date();
+    if (test.start_time && new Date(test.start_time) > now) {
+      return res.status(403).json({ error: `Exam has not started yet. Opens at: ${new Date(test.start_time).toLocaleString()}` });
+    }
+    if (test.end_time && new Date(test.end_time) < now) {
+      return res.status(403).json({ error: `Exam is closed. Ended at: ${new Date(test.end_time).toLocaleString()}` });
+    }
+
+    if (test.access_key && test.access_key.trim() !== '') {
+      if (!access_key || access_key.trim() !== test.access_key) return res.status(403).json({ error: 'Invalid Access Key' });
+    }
+
+    if (test.max_attempts && test.max_attempts > 0) {
+      let sql = 'SELECT COUNT(*) as count FROM attempts WHERE test_id = ? AND status = "submitted" AND ';
+      let params = [testId];
+      if (student_db_id) { sql += 'student_db_id = ?'; params.push(student_db_id); }
+      else { sql += 'student_name = ?'; params.push(student_name); }
+
+      db.get(sql, params, (err2, row) => {
+        if (err2) return res.status(500).json({ error: err2.message });
+        if (row.count >= test.max_attempts) return res.status(403).json({ error: `Maximum attempts (${test.max_attempts}) exceeded.` });
+        res.json({ success: true });
+      });
+    } else {
+      res.json({ success: true });
+    }
+  });
+});
+
+app.get('/api/tests/:testId/info', (req, res) => {
+  db.get('SELECT id, name, description, duration_minutes, instructions, max_attempts, type, access_key, start_time, end_time, questions_per_attempt, CASE WHEN access_key IS NOT NULL AND access_key != "" THEN 1 ELSE 0 END as is_locked FROM tests WHERE id = ?', [req.params.testId], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(row);
+  });
+});
+
+// Update a test (including schedule)
+app.put('/api/tests/:testId', (req, res) => {
+  const testId = req.params.testId;
+  const { name, description, duration_minutes, questions_per_attempt, instructions, max_attempts, access_key, type, start_time, end_time } = req.body;
+  db.run(
+    `UPDATE tests SET 
+      name = ?,
+      description = ?,
+      duration_minutes = ?,
+      questions_per_attempt = ?,
+      instructions = ?,
+      max_attempts = ?,
+      access_key = ?,
+      type = ?,
+      start_time = ?,
+      end_time = ?
+     WHERE id = ?`,
+    [
+      name,
+      description || '',
+      duration_minutes || null,
+      questions_per_attempt || null,
+      instructions || '',
+      max_attempts || null,
+      access_key || null,
+      type || 'exam',
+      start_time || null,
+      end_time || null,
+      testId
+    ],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    }
+  );
+});
+
+app.get('/api/tests/:testId/full', (req, res) => {
+  const testId = req.params.testId;
+  db.get('SELECT duration_minutes, questions_per_attempt, type FROM tests WHERE id = ?', [testId], (err, testRow) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!testRow) return res.status(404).json({ error: 'Test not found' });
+
+    db.all(
+      `SELECT q.id as question_id, q.text as question_text, q.marks, q.image_url,
+              o.id as option_id, o.text as option_text
+       FROM questions q
+       JOIN options o ON q.id = o.question_id
+       WHERE q.test_id = ?`,
+      [testId],
+      (err2, rows) => {
+        if (err2) return res.status(500).json({ error: err2.message });
+        const questionsMap = {};
+        rows.forEach(r => {
+          if (!questionsMap[r.question_id]) {
+            questionsMap[r.question_id] = { id: r.question_id, text: r.question_text, marks: r.marks, image_url: r.image_url, options: [] };
+          }
+          questionsMap[r.question_id].options.push({ id: r.option_id, text: r.option_text });
+        });
+
+        let allQuestions = Object.values(questionsMap);
+        allQuestions = shuffle(allQuestions);
+
+        if (testRow.questions_per_attempt && testRow.questions_per_attempt > 0 && testRow.questions_per_attempt < allQuestions.length) {
+          allQuestions = allQuestions.slice(0, testRow.questions_per_attempt);
+        }
+        allQuestions.forEach(q => { q.options = shuffle(q.options); });
+
+        res.json({
+          test_config: { 
+            duration_minutes: testRow.duration_minutes || 10,
+            type: testRow.type || 'exam'
+          },
+          questions: allQuestions
+        });
+      }
+    );
+  });
+});
+
 app.post('/api/tests/:testId/submit', (req, res) => {
   const testId = req.params.testId;
-  const { student_name, student_id, answers } = req.body; 
-  // answers: [{question_id, option_id}]
+  const { student_name, student_id, student_db_id, answers, attempt_id } = req.body; 
+
+  if (!answers || answers.length === 0) return res.status(400).json({ error: 'No answers' });
 
   const oIds = answers.map(a => a.option_id);
-  if (oIds.length === 0) {
-    return res.status(400).json({ error: 'No answers' });
-  }
-
   const placeholders = oIds.map(() => '?').join(',');
+
   db.all(
     `SELECT id, question_id, text, is_correct FROM options WHERE id IN (${placeholders})`,
     oIds,
-    (err, rows) => {
+    (err, optRows) => {
       if (err) return res.status(500).json({ error: err.message });
-
-      const optionMap = {};
-      rows.forEach(r => (optionMap[r.id] = r));
-
-      let score = 0;
-      const detailed = [];
-
-      const qPlaceholders = answers.map(() => '?').join(',');
+      const optionMap = {}; 
+      optRows.forEach(r => (optionMap[r.id] = r));
       const qIds = answers.map(a => a.question_id);
+      const qPlaceholders = qIds.map(() => '?').join(',');
 
       db.all(
-        `SELECT id, text FROM questions WHERE id IN (${qPlaceholders})`,
+        `SELECT id, text, marks FROM questions WHERE id IN (${qPlaceholders})`,
         qIds,
         (errQ, qRows) => {
           if (errQ) return res.status(500).json({ error: errQ.message });
-          const questionTextMap = {};
-          qRows.forEach(q => (questionTextMap[q.id] = q.text));
+          const questionMap = {};
+          qRows.forEach(q => (questionMap[q.id] = q));
+
+          let score = 0;
+          let totalPossible = 0;
+          const detailed = [];
 
           answers.forEach(a => {
+            const qData = questionMap[a.question_id];
+            if (!qData) return;
+            const qMarks = qData.marks || 1;
+            totalPossible += qMarks;
             const selected = optionMap[a.option_id];
-            if (!selected) return;
-            const correct = rows.find(o => o.question_id === selected.question_id && o.is_correct === 1);
-            const isCorrect = selected.is_correct === 1;
-            if (isCorrect) score++;
+            let isCorrect = false;
+            if (selected && selected.question_id === a.question_id && selected.is_correct === 1) {
+              isCorrect = true;
+              score += qMarks;
+            }
             detailed.push({
-              question_id: selected.question_id,
-              question_text: questionTextMap[selected.question_id] || '',
-              selected_option: {
-                id: selected.id,
-                text: selected.text,
-                is_correct: selected.is_correct === 1
-              },
-              correct_option: correct
-                ? { id: correct.id, text: correct.text, is_correct: true }
-                : null
+              question_id: a.question_id,
+              question_text: qData.text,
+              marks: qMarks,
+              selected_option: selected ? { text: selected.text, is_correct: isCorrect } : null,
+              correct_option: null 
             });
           });
 
-          const total = answers.length;
+          db.all(
+            `SELECT question_id, text FROM options WHERE question_id IN (${qPlaceholders}) AND is_correct = 1`,
+            qIds,
+            (errC, correctRows) => {
+               const correctMap = {};
+               correctRows.forEach(r => correctMap[r.question_id] = r.text);
+               detailed.forEach(d => { d.correct_option = { text: correctMap[d.question_id] || 'Unknown' }; });
 
-          db.run(
-            'INSERT INTO attempts (student_name, student_id, test_id, score, total) VALUES (?, ?, ?, ?, ?)',
-            [student_name, student_id || '', testId, score, total],
-            function (err2) {
-              if (err2) return res.status(500).json({ error: err2.message });
-              res.json({
-                attempt_id: this.lastID,
-                score,
-                total,
-                detailed
-              });
+               // Check test type: practice mode should NOT create or update attempts
+               db.get('SELECT type FROM tests WHERE id = ?', [testId], (errT, testRow) => {
+                 if (errT || !testRow) return res.status(500).json({ error: 'Test lookup failed' });
+                 if (testRow.type === 'practice') {
+                   // Just return score/detailed, no DB write, no attempt id
+                   return res.json({ attempt_id: null, score, total: totalPossible, detailed });
+                 }
+
+                 if (attempt_id) {
+                   db.run(
+                     'UPDATE attempts SET score = ?, total = ?, status = "submitted" WHERE id = ?',
+                     [score, totalPossible, attempt_id],
+                     function(err2) {
+                       if (err2) return res.status(500).json({ error: err2.message });
+                       res.json({ attempt_id, score, total: totalPossible, detailed });
+                     }
+                   );
+                 } else {
+                   db.run(
+                    'INSERT INTO attempts (student_name, student_id, student_db_id, test_id, score, total, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    [student_name, student_id || '', student_db_id || null, testId, score, totalPossible, 'submitted'],
+                    function (err2) {
+                      if (err2) return res.status(500).json({ error: err2.message });
+                      res.json({ attempt_id: this.lastID, score, total: totalPossible, detailed });
+                    }
+                  );
+                 }
+               });
             }
           );
         }
@@ -264,19 +599,56 @@ app.post('/api/tests/:testId/submit', (req, res) => {
   );
 });
 
-// Simple route to view attempts (for teacher, no auth yet)
-app.get('/api/attempts', (req, res) => {
-  db.all(
-    `SELECT a.*, t.name AS test_name
-     FROM attempts a
-     JOIN tests t ON a.test_id = t.id
-     ORDER BY a.created_at DESC`,
-    [],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json(rows);
+// Start Attempt (for Live Monitoring)
+app.post('/api/tests/:testId/start', (req, res) => {
+  const testId = req.params.testId;
+  const { student_name, student_id, student_db_id } = req.body;
+
+  // Check test type first; do not record attempts for practice mode
+  db.get('SELECT type FROM tests WHERE id = ?', [testId], (err, test) => {
+    if (err || !test) return res.status(404).json({ error: 'Test not found' });
+
+    if (test.type === 'practice') {
+      // No DB write; just return null attempt id for practice
+      return res.json({ attempt_id: null });
     }
-  );
+
+    const cleanSql = `UPDATE attempts SET status = 'abandoned' WHERE test_id = ? AND status = 'in-progress' AND (student_db_id = ? OR (student_db_id IS NULL AND student_name = ?))`;
+
+    db.run(cleanSql, [testId, student_db_id || -1, student_name], (err2) => {
+      db.run(
+        'INSERT INTO attempts (student_name, student_id, student_db_id, test_id, score, total, status) VALUES (?, ?, ?, ?, 0, 0, ?)',
+        [student_name, student_id || '', student_db_id || null, testId, 'in-progress'],
+        function(err3) {
+          if (err3) return res.status(500).json({ error: err3.message });
+          res.json({ attempt_id: this.lastID });
+        }
+      );
+    });
+  });
+});
+
+// Report Violation
+app.post('/api/attempts/:attemptId/violation', (req, res) => {
+  db.run('UPDATE attempts SET violations = violations + 1 WHERE id = ?', [req.params.attemptId], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+app.get('/api/attempts/:id', (req, res) => {
+  db.get('SELECT a.*, t.name as test_name FROM attempts a JOIN tests t ON a.test_id = t.id WHERE a.id = ?', [req.params.id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'Attempt not found' });
+    res.json(row);
+  });
+});
+
+app.get('/api/attempts', (req, res) => {
+  db.all('SELECT a.*, t.name AS test_name FROM attempts a JOIN tests t ON a.test_id = t.id WHERE a.status = "submitted" ORDER BY a.created_at DESC', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
 });
 
 app.listen(PORT, () => {

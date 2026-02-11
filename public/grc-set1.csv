@@ -1,0 +1,48 @@
+Governance, Risk, and Compliance – Set 1,
+1,What does GRC stand for?,Governance Risk and Compliance,Global Risk Control,General Routing Control,Governance Reporting Committee,1
+1,What is the main purpose of IT governance?,Ensure IT supports business goals and manages risks,Increase screen resolution,Change IP addresses,Improve graphics,1
+1,Which element of GRC focuses on following laws and regulations?,Compliance,Governance,Risk,Automation,1
+1,Which element of GRC focuses on identifying and managing uncertainty?,Risk,Compliance,Governance,Backup,1
+1,What is a security policy?,High-level statement of management intent and rules,Technical command,Network device,Backup file,1
+1,Why are security policies important?,Provide direction and expectations for security behavior,Increase internet speed,Control printers,Change logos,1
+1,What is risk in the context of information security?,Combination of likelihood and impact of a threat,Number of servers,Amount of RAM,CPU speed,1
+1,What is a control in risk management?,Measure taken to reduce risk,Type of computer,User account,Printer model,1
+1,Which standard is widely used for information security management systems?,ISO 27001,PCI DSS,GDPR,CCNA,1
+1,Which regulation focuses on protection of personal data in the EU?,GDPR,PCI DSS,SOX,CCPA,1
+1,What does PCI DSS mainly apply to?,Organizations handling payment card data,Telecom providers only,ISPs only,Schools only,1
+1,Why is "tone at the top" important for security?,Leadership behavior influences the whole organization,It changes firewall rules,It configures routers,It boosts marketing,1
+1,What is a risk register?,Document listing identified risks, owners, and status,Inventory of desktops,List of passwords,Backup tape index,1
+1,What is "residual risk"?,Risk remaining after controls are applied,Initial risk before controls,Zero risk,Risk transferred to others,1
+1,Which risk treatment option involves sharing risk with another party?,Risk transfer,Risk acceptance,Risk avoidance,Risk ignorance,1
+1,Which risk treatment option means choosing not to engage in the risky activity?,Risk avoidance,Risk transfer,Risk acceptance,Risk sharing,1
+1,Which framework provides controls for cybersecurity in US critical infrastructure?,NIST CSF,COBIT,TOGAF,ITIL,1
+1,What does "segregation of duties" help prevent?,Fraud and errors by splitting critical tasks,Better Wi‑Fi,More RAM,Bigger screens,1
+1,Why are regular audits important?,Verify that controls are effective and policies are followed,Increase log size,Reduce staff,Change hardware,1
+1,What is compliance monitoring?,Ongoing checks to ensure requirements are being met,Shutting down systems,Only reviewing logs yearly,Changing IP schemes,1
+1,What is "acceptable use policy" (AUP)?,Rules on how users may use company IT resources,Network design document,Backup script,Pen-test report,1
+1,Why should third-party vendors be assessed for security?,They may introduce additional risks,They increase color depth,They always reduce risk,They manage HR,1
+1,What is due diligence in vendor management?,Investigating vendor security before engagement,Paying invoices,Changing contracts,Restarting servers,1
+1,What is "business continuity" concerned with?,Keeping critical operations running during disruption,Increasing CPU,Improving UI,Changing colors,1
+1,Which document typically defines recovery time objectives and procedures?,Business Continuity Plan (BCP),Marketing Plan,Sales Strategy,Hiring Policy,1
+1,What does "least privilege" help with from GRC perspective?,Reducing risk of misuse or compromise,Increasing uptime only,Lowering cost only,Changing brands,1
+1,Why is documentation of controls and processes important?,Supports audits, consistency, and training,Increases electricity use,Improves gaming,Changes weather,1
+1,What is the purpose of a data classification policy?,Define how data is labeled and protected based on sensitivity,Set printer speeds,Change DNS,Control RAM,1
+1,Which classification label typically needs the strongest protection?,Highly Confidential,Public,Internal,Low,1
+1,Why is employee security awareness training a GRC concern?,Human behavior significantly impacts risk,It changes logos,It increases bandwidth,It only affects HR,1
+1,What is "risk appetite"?,Amount of risk an organization is willing to accept,Total number of risks,Risk of appetite loss,Vendor risk only,1
+1,Why should exceptions to security policies be documented and approved?,To ensure risk is understood and controlled,To avoid paperwork,To ignore auditors,To speed up internet,1
+1,What is "compliance evidence"?,Records showing that controls are in place and effective,Network diagrams only,Printer list,Software licenses,1
+1,Which law focuses on financial reporting controls in the US?,SOX,GDPR,PCI DSS,CCPA,1
+1,What is the purpose of internal controls?,Reduce risk and ensure reliable operations/reporting,Increase marketing,Change branding,Improve UX only,1
+1,Why are periodic risk assessments necessary?,Risks and environments change over time,Risks never change,To reduce meetings,To change buildings,1
+1,Which function often manages security policies and compliance?,Information Security / GRC team,Sales team,Facilities,Art department,1
+1,What is a "control owner"?,Person responsible for operating a specific control,CEO,Any user,Firewall vendor,1
+1,Why is management sign-off on risk decisions important?,Ensures leadership accepts responsibility for risk,Reduces risk to zero,Changes vendors,Improves logos,1
+1,What does "audit trail" refer to?,Record of actions and changes for accountability,Marketing history,Server warranty,Printer pages,1
+1,Why is segregation of test and production environments important for compliance?,Prevents untested changes affecting live data,Improves gaming,Reduces bandwidth,Changes UI,1
+1,What is a "policy exception"?,Approved deviation from standard policy,Complete policy removal,User complaint,New law,1
+1,Which metric shows how many findings from audits are still unresolved?,Open issue count,CPU usage,Disk capacity,Network throughput,1
+1,Why should compliance be integrated into daily operations, not just projects?,To avoid gaps and surprises during audits,To slow work,To increase cost,To change vendors,1
+1,What is "evidence of effectiveness" for a control?,Proof that control works as intended,Number of controls,Budget amount,Number of staff,1
+1,Why is data retention policy important?,Defines how long to keep data for legal/operational reasons,Increases disk speed,Changes CPU,Improves graphics,1
+1,Which concept requires that duties like approving and paying invoices are split?,Segregation of duties,Single responsibility,Job rotation,Shadow IT,1

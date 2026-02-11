@@ -1,0 +1,45 @@
+Endpoint Security – Set 1,
+1,What is the main goal of endpoint security?,Protect individual devices from threats,Increase internet speed,Change IP addresses,Configure VLANs,1
+1,Which of the following is an example of an endpoint?,Laptop,Core router,Patch panel,UPS,1
+1,Which type of software is commonly used to detect and remove malware on endpoints?,Antivirus/anti-malware,Word processor,Web browser,Media player,1
+1,Why is it risky to use outdated operating systems on endpoints?,They no longer receive security updates,They use too much storage,They are slower on Wi‑Fi,They always require static IPs,1
+1,What is the purpose of endpoint encryption?,Protect data on the device if it is lost or stolen,Improve Wi‑Fi signal,Increase CPU speed,Compress log files,1
+1,Which is a good example of strong endpoint authentication?,Password + biometric or token,Same password for all devices,No password,Simple 4-digit PIN everywhere,1
+1,Why are local administrator accounts on endpoints a security risk?,Attackers can gain full control if compromised,They speed up performance,They reduce storage,They improve printing,1
+1,What is application whitelisting?,Allowing only approved applications to run,Blocking all applications,Allowing every application,Deleting applications monthly,1
+1,Which feature helps prevent unauthorized software installation on endpoints?,Standard user accounts and application control,Using only Wi‑Fi,Using default passwords,Disabling firewalls,1
+1,What is patch management for endpoints?,Regularly applying updates and fixes,Changing IP addresses,Rebooting daily,Switching keyboards,1
+1,Why is automatic update configuration important on endpoints?,Ensures timely security patches,Reduces RAM,Disables antivirus,Increases screen brightness,1
+1,Which of these is an example of endpoint hardening?,Disabling unused services and ports,Installing more games,Sharing passwords,Enabling all macros,1
+1,Why are USB storage devices a security concern on endpoints?,They can introduce malware or steal data,They slow down CPUs,They prevent shutdown,They disable Wi‑Fi,1
+1,Which control helps detect suspicious behavior on endpoints beyond known signatures?,Endpoint Detection and Response (EDR),Text editor,File explorer,Media player,1
+1,What is a common sign that an endpoint may be compromised?,Unusual CPU/network usage and unknown processes,Fast boot time,Low disk usage,Updated OS,1
+1,Why should users not run as local admin on daily basis?,It increases risk of malware installation and misconfigurations,It speeds up internet,It improves graphics,It fixes printers,1
+1,Which practice helps protect endpoints from phishing emails?,User awareness training and email filtering,Using bigger screens,Using louder speakers,Disabling screensavers,1
+1,What is disk full-disk encryption mainly protecting against?,Data theft from lost or stolen devices,Power surges,Overheating,Slow internet,1
+1,Which of the following should be disabled or restricted in documents to reduce malware risk?,Untrusted macros,Spell check,Printing,Page numbers,1
+1,Why is endpoint inventory important?,To know which devices exist and their security state,To track chair counts,To monitor room temperature,To manage cabling,1
+1, What should be done before allowing a new endpoint onto the corporate network?,Verify it meets security baseline (patches, AV, config),Check wallpaper,Install games,Disable password,1
+1,Why is logging important on endpoints?,To support investigations and detect anomalies,To slow systems,To fill disks,To break encryption,1
+1,Which security control can isolate suspicious endpoint behavior automatically?,EDR with automated containment,Screen saver,Wallpaper change,Desktop icons,1
+1,What is a common method to protect corporate data on BYOD (Bring Your Own Device) endpoints?,Use mobile device management (MDM) and app containers,Share root passwords,Disable encryption,Allow any app,1
+1,Why is it important to disable unused network services on endpoints?,Reduces attack surface,Increases attack surface,Makes internet free,Enables more games,1
+1,What does "least privilege" mean for endpoint users?,Give minimum rights needed to do their job,Give admin rights to everyone,Give no rights ever,Give random rights,1
+1,Which of these is a good practice for endpoint local firewall configuration?,Block unnecessary inbound traffic,Disable firewall completely,Allow all ports,Block DNS,1
+1,What is the purpose of host-based intrusion prevention (HIPS)?,Block suspicious behavior on the endpoint,Speed up Wi‑Fi,Encrypt backups only,Change screen resolution,1
+1,Why should default local admin passwords not be shared across endpoints?,A compromise on one device exposes all others,It makes login faster,It improves video quality,It reduces logs,1
+1,Which method helps protect endpoints from ransomware?,Regular backups + patching + limited privileges,Disable backups,Give everyone admin rights,Ignore updates,1
+1,Why is application control important for endpoint security?,Prevents unauthorized or risky apps from running,Improves battery life only,Changes theme,Disables internet,1
+1,Which setting on email clients reduces risk from malicious attachments?,Block or warn on executable attachments,Always auto-open attachments,Disable spam filters,Disable previews,1
+1,Why is browser hardening important on endpoints?,Browsers are a common attack vector,It changes font size,It removes cookies only,It reduces RAM,1
+1,Which of these helps prevent keylogger attacks?,Using endpoint protection and avoiding unknown installs,Typing slower,Using bigger keyboard,Disabling firewall,1
+1,Why should remote desktop access to endpoints be restricted?,Attackers can use exposed RDP to take over devices,It speeds up patching,It improves graphics,It changes usernames,1
+1,Which is a practical control for endpoints used by many different users (e.g. labs)?,Use standard images and regular re-imaging,Allow personal admin accounts,Disable antivirus,No updates ever,1
+1,Why is securing local browser passwords important?,Compromise can expose many application logins,It improves audio,It improves printing,It changes wallpaper,1
+1,Which policy helps reduce risk when employees leave the organization?,Promptly disable accounts and revoke access,Keep accounts active,Share passwords,Delete all logs,1
+1,Why is endpoint backup important?,Allows recovery from ransomware or hardware failure,Slows the network,Increases spam,Disables encryption,1
+1,What does "EDR" stand for?,Endpoint Detection and Response,Endpoint Data Router,Enterprise Data Replication,Encrypted Device Recovery,1
+1,Why should public Wi‑Fi usage on endpoints be controlled?,It may expose traffic to interception,It always increases speed,It fixes printers,It reduces battery,1
+1,Which is a good practice for handling lost or stolen endpoints?,Remotely wipe if possible and revoke access,Ignore it,Share credentials,Disable backups,1
+1,Why are local browser extensions a security concern?,Malicious extensions can steal data or inject code,They change themes,They improve video,They increase battery,1
+1,Which measure helps ensure new endpoints are deployed securely?,Use a hardened gold image with baseline controls,Let users install OS manually,Use default vendor image unmodified,Disable antivirus,1
