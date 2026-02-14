@@ -683,6 +683,21 @@ app.get('/api/attempts', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Cyber Test App running on http://localhost:${PORT}`);
+function initDatabase(callback) {
+  const schemaPath = path.join(__dirname, 'schema.sql');
+  fs.readFile(schemaPath, 'utf8', (readErr, schema) => {
+    if (readErr) return callback(readErr);
+    db.exec(schema, callback);
+  });
+}
+
+initDatabase((err) => {
+  if (err) {
+    console.error('Failed to initialize database schema:', err.message);
+    process.exit(1);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Cyber Test App running on http://localhost:${PORT}`);
+  });
 });
