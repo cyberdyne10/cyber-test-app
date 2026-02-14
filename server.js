@@ -119,6 +119,22 @@ async function initializeAdminCredentials() {
   const hashRow = await dbGetAsync("SELECT value FROM admin_settings WHERE key = 'password_hash'");
   const legacyRow = await dbGetAsync("SELECT value FROM admin_settings WHERE key = 'password'");
 
+  // Deterministic startup behavior: if ADMIN_PASSWORD is provided, ensure DB hash matches it.
+  // This prevents lockouts when DB password drifts from deployment config.
+  if (process.env.ADMIN_PASSWORD) {
+    const envPasswordMatches = hashRow && isLikelyBcryptHash(hashRow.value)
+      ? await bcrypt.compare(process.env.ADMIN_PASSWORD, hashRow.value)
+      : false;
+
+    if (!envPasswordMatches) {
+      const envHash = await bcrypt.hash(process.env.ADMIN_PASSWORD, BCRYPT_ROUNDS);
+      await dbRunAsync("INSERT OR REPLACE INTO admin_settings (key, value) VALUES ('password_hash', ?)", [envHash]);
+      await dbRunAsync("DELETE FROM admin_settings WHERE key = 'password'");
+      console.log('[SECURITY] Admin password hash synchronized from ADMIN_PASSWORD environment variable.');
+    }
+    return;
+  }
+
   if (hashRow && isLikelyBcryptHash(hashRow.value)) return;
 
   if (legacyRow && legacyRow.value) {
@@ -126,14 +142,12 @@ async function initializeAdminCredentials() {
     return;
   }
 
-  const bootstrapPassword = process.env.ADMIN_PASSWORD || (!IS_PROD ? DEV_DEFAULT_ADMIN_PASSWORD : null);
+  const bootstrapPassword = !IS_PROD ? DEV_DEFAULT_ADMIN_PASSWORD : null;
   if (!bootstrapPassword) {
     throw new Error('ADMIN_PASSWORD is required on first production run when no admin hash exists.');
   }
 
-  if (!process.env.ADMIN_PASSWORD) {
-    console.warn(`[SECURITY] ADMIN_PASSWORD not set. Bootstrapping local development admin password to default: ${DEV_DEFAULT_ADMIN_PASSWORD}. Change it immediately.`);
-  }
+  console.warn(`[SECURITY] ADMIN_PASSWORD not set. Bootstrapping local development admin password to default: ${DEV_DEFAULT_ADMIN_PASSWORD}. Change it immediately.`);
 
   const hash = await bcrypt.hash(bootstrapPassword, BCRYPT_ROUNDS);
   await dbRunAsync("INSERT OR REPLACE INTO admin_settings (key, value) VALUES ('password_hash', ?)", [hash]);
