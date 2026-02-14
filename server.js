@@ -38,7 +38,12 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  // Frontend currently uses inline scripts/styles in public/*.html.
+  // Disable CSP for now to prevent login/register/admin button JS from being blocked.
+  contentSecurityPolicy: false
+}));
 app.use(bodyParser.json());
 
 const configuredOrigins = (process.env.CORS_ORIGIN || '').split(',').map(o => o.trim()).filter(Boolean);
