@@ -6,9 +6,24 @@ const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const helmet = require('helmet');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const IS_PROD = process.env.NODE_ENV === 'production';
+const BCRYPT_ROUNDS = parseInt(process.env.ADMIN_BCRYPT_ROUNDS || '12', 10);
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'dev-only-change-me';
+const ADMIN_TOKEN_EXPIRY = process.env.ADMIN_TOKEN_EXPIRY || '2h';
+const DEV_DEFAULT_ADMIN_PASSWORD = 'ChangeMe_LocalAdmin_123!';
+
+if (IS_PROD && !process.env.ADMIN_JWT_SECRET) {
+  console.error('ADMIN_JWT_SECRET is required in production.');
+  process.exit(1);
+}
 
 // Setup Uploads
 const storage = multer.diskStorage({
@@ -23,16 +38,22 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
+app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
-// Simple CORS
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  next();
-});
+const configuredOrigins = (process.env.CORS_ORIGIN || '').split(',').map(o => o.trim()).filter(Boolean);
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (!IS_PROD) return callback(null, true);
+    if (configuredOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Helper to generate Reg Number
 function generateRegNumber(id) {
@@ -51,26 +72,143 @@ function shuffle(array) {
   return array;
 }
 
-// ADMIN AUTH ROUTES
-app.post('/api/admin/login', (req, res) => {
-  const { password } = req.body;
-  db.get("SELECT value FROM admin_settings WHERE key = 'password'", (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    const currentPwd = row ? row.value : 'CyberAdmin2025!';
-    if (password === currentPwd) {
-      res.json({ success: true });
-    } else {
-      res.status(401).json({ error: 'Incorrect password' });
-    }
+function dbGetAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => err ? reject(err) : resolve(row));
   });
+}
+
+function dbRunAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) return reject(err);
+      resolve(this);
+    });
+  });
+}
+
+function isLikelyBcryptHash(value) {
+  return typeof value === 'string' && /^\$2[aby]\$\d{2}\$/.test(value);
+}
+
+function isStrongAdminPassword(password) {
+  if (typeof password !== 'string') return false;
+  return password.length >= 12 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password) && /[^A-Za-z0-9]/.test(password);
+}
+
+function signAdminToken() {
+  return jwt.sign({ role: 'admin' }, ADMIN_JWT_SECRET, { expiresIn: ADMIN_TOKEN_EXPIRY });
+}
+
+function requireAdminAuth(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  const [scheme, token] = authHeader.split(' ');
+  if (scheme !== 'Bearer' || !token) return res.status(401).json({ error: 'Admin auth required' });
+
+  try {
+    const payload = jwt.verify(token, ADMIN_JWT_SECRET);
+    if (payload.role !== 'admin') return res.status(403).json({ error: 'Invalid admin token' });
+    req.admin = payload;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired admin token' });
+  }
+}
+
+async function initializeAdminCredentials() {
+  const hashRow = await dbGetAsync("SELECT value FROM admin_settings WHERE key = 'password_hash'");
+  const legacyRow = await dbGetAsync("SELECT value FROM admin_settings WHERE key = 'password'");
+
+  if (hashRow && isLikelyBcryptHash(hashRow.value)) return;
+
+  if (legacyRow && legacyRow.value) {
+    console.warn('[SECURITY] Legacy plaintext admin password detected. It will be migrated to hash on successful admin login/update.');
+    return;
+  }
+
+  const bootstrapPassword = process.env.ADMIN_PASSWORD || (!IS_PROD ? DEV_DEFAULT_ADMIN_PASSWORD : null);
+  if (!bootstrapPassword) {
+    throw new Error('ADMIN_PASSWORD is required on first production run when no admin hash exists.');
+  }
+
+  if (!process.env.ADMIN_PASSWORD) {
+    console.warn(`[SECURITY] ADMIN_PASSWORD not set. Bootstrapping local development admin password to default: ${DEV_DEFAULT_ADMIN_PASSWORD}. Change it immediately.`);
+  }
+
+  const hash = await bcrypt.hash(bootstrapPassword, BCRYPT_ROUNDS);
+  await dbRunAsync("INSERT OR REPLACE INTO admin_settings (key, value) VALUES ('password_hash', ?)", [hash]);
+}
+
+const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Try again later.' }
 });
 
-app.post('/api/admin/update-password', (req, res) => {
-  const { password } = req.body;
-  db.run("INSERT OR REPLACE INTO admin_settings (key, value) VALUES ('password', ?)", [password], (err) => {
-    if (err) return res.status(500).json({ error: err.message });
+// ADMIN AUTH ROUTES
+app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ error: 'Password is required' });
+
+    const hashRow = await dbGetAsync("SELECT value FROM admin_settings WHERE key = 'password_hash'");
+    const legacyRow = await dbGetAsync("SELECT value FROM admin_settings WHERE key = 'password'");
+
+    let authenticated = false;
+
+    if (hashRow && isLikelyBcryptHash(hashRow.value)) {
+      authenticated = await bcrypt.compare(password, hashRow.value);
+    } else if (legacyRow && legacyRow.value) {
+      authenticated = password === legacyRow.value;
+      if (authenticated) {
+        const newHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+        await dbRunAsync("INSERT OR REPLACE INTO admin_settings (key, value) VALUES ('password_hash', ?)", [newHash]);
+        await dbRunAsync("DELETE FROM admin_settings WHERE key = 'password'");
+      }
+    }
+
+    if (!authenticated) return res.status(401).json({ error: 'Incorrect password' });
+
+    const token = signAdminToken();
+    res.json({ success: true, token, expiresIn: ADMIN_TOKEN_EXPIRY });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/update-password', requireAdminAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required' });
+    }
+
+    if (!isStrongAdminPassword(newPassword)) {
+      return res.status(400).json({ error: 'New password must be at least 12 chars with uppercase, lowercase, number and symbol.' });
+    }
+
+    const hashRow = await dbGetAsync("SELECT value FROM admin_settings WHERE key = 'password_hash'");
+    const legacyRow = await dbGetAsync("SELECT value FROM admin_settings WHERE key = 'password'");
+
+    let currentMatches = false;
+    if (hashRow && isLikelyBcryptHash(hashRow.value)) {
+      currentMatches = await bcrypt.compare(currentPassword, hashRow.value);
+    } else if (legacyRow && legacyRow.value) {
+      currentMatches = currentPassword === legacyRow.value;
+    }
+
+    if (!currentMatches) return res.status(401).json({ error: 'Current password is incorrect' });
+
+    const nextHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await dbRunAsync("INSERT OR REPLACE INTO admin_settings (key, value) VALUES ('password_hash', ?)", [nextHash]);
+    await dbRunAsync("DELETE FROM admin_settings WHERE key = 'password'");
+
     res.json({ success: true });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // STUDENT AUTH ROUTES
@@ -123,7 +261,7 @@ app.get('/api/student/:id/history', (req, res) => {
 });
 
 // List all students
-app.get('/api/students', (req, res) => {
+app.get('/api/students', requireAdminAuth, (req, res) => {
   db.all('SELECT id, name, username, reg_number FROM students ORDER BY id DESC', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
@@ -131,7 +269,7 @@ app.get('/api/students', (req, res) => {
 });
 
 // Delete Student
-app.delete('/api/students/:id', (req, res) => {
+app.delete('/api/students/:id', requireAdminAuth, (req, res) => {
   const studentId = req.params.id;
   // Optional: Also delete their attempts? For now, we keep attempts for record but unlink them or just delete student.
   // Better to keep attempts but student gone. Or delete attempts too.
@@ -147,7 +285,7 @@ app.delete('/api/students/:id', (req, res) => {
  */
 
 // Create a test (updated for type and schedule)
-app.post('/api/tests', (req, res) => {
+app.post('/api/tests', requireAdminAuth, (req, res) => {
   const { name, description, duration_minutes, questions_per_attempt, instructions, max_attempts, access_key, type, start_time, end_time } = req.body;
   db.run(
     'INSERT INTO tests (name, description, duration_minutes, questions_per_attempt, instructions, max_attempts, access_key, type, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -166,7 +304,7 @@ app.get('/api/tests', (req, res) => {
   });
 });
 
-app.delete('/api/tests/:testId', (req, res) => {
+app.delete('/api/tests/:testId', requireAdminAuth, (req, res) => {
   const testId = req.params.testId;
   db.run('DELETE FROM options WHERE question_id IN (SELECT id FROM questions WHERE test_id = ?)', [testId], err => {
     if (err) return res.status(500).json({ error: err.message });
@@ -180,7 +318,7 @@ app.delete('/api/tests/:testId', (req, res) => {
   });
 });
 
-app.post('/api/tests/:testId/duplicate', (req, res) => {
+app.post('/api/tests/:testId/duplicate', requireAdminAuth, (req, res) => {
   const testId = req.params.testId;
   db.get('SELECT * FROM tests WHERE id = ?', [testId], (err, test) => {
     if (err || !test) return res.status(404).json({ error: 'Test not found' });
@@ -215,7 +353,7 @@ app.post('/api/tests/:testId/duplicate', (req, res) => {
 });
 
 // Analytics
-app.get('/api/analytics', (req, res) => {
+app.get('/api/analytics', requireAdminAuth, (req, res) => {
   db.all(
     `SELECT t.id, t.name, 
             COUNT(a.id) as attempts, 
@@ -233,7 +371,7 @@ app.get('/api/analytics', (req, res) => {
 });
 
 // Live Monitoring
-app.get('/api/live', (req, res) => {
+app.get('/api/live', requireAdminAuth, (req, res) => {
   db.all(
     `SELECT a.id, a.student_name, t.name as test_name, a.created_at, a.violations
      FROM attempts a
@@ -250,7 +388,7 @@ app.get('/api/live', (req, res) => {
 });
 
 // CSV Export
-app.get('/api/export/csv', (req, res) => {
+app.get('/api/export/csv', requireAdminAuth, (req, res) => {
   const testId = req.query.test_id;
   let sql = `SELECT a.id, a.student_name, a.student_id, t.name as test_name, a.score, a.total, a.created_at, a.violations 
              FROM attempts a JOIN tests t ON a.test_id = t.id WHERE a.status = 'submitted'`;
@@ -271,7 +409,7 @@ app.get('/api/export/csv', (req, res) => {
 });
 
 // Bulk Import
-app.post('/api/tests/:testId/import', upload.single('file'), (req, res) => {
+app.post('/api/tests/:testId/import', requireAdminAuth, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file' });
   const testId = req.params.testId;
   const content = fs.readFileSync(req.file.path, 'utf8');
@@ -309,7 +447,7 @@ app.post('/api/tests/:testId/import', upload.single('file'), (req, res) => {
 });
 
 // Questions with Images
-app.post('/api/tests/:testId/questions', upload.single('image'), (req, res) => {
+app.post('/api/tests/:testId/questions', requireAdminAuth, upload.single('image'), (req, res) => {
   const testId = req.params.testId;
   const text = req.body.text;
   const marks = req.body.marks || 1;
@@ -331,7 +469,7 @@ app.post('/api/tests/:testId/questions', upload.single('image'), (req, res) => {
   });
 });
 
-app.get('/api/tests/:testId/questions-full', (req, res) => {
+app.get('/api/tests/:testId/questions-full', requireAdminAuth, (req, res) => {
   const testId = req.params.testId;
   db.all(
     `SELECT q.id as question_id, q.text as question_text, q.marks, q.image_url, q.question_type,
@@ -355,7 +493,7 @@ app.get('/api/tests/:testId/questions-full', (req, res) => {
   );
 });
 
-app.post('/api/questions/:questionId/update', (req, res) => {
+app.post('/api/questions/:questionId/update', requireAdminAuth, (req, res) => {
   const questionId = req.params.questionId;
   const { text, marks, options, question_type } = req.body;
   db.run('UPDATE questions SET text = ?, marks = ?, question_type = ? WHERE id = ?', [text, marks || 1, question_type || 'single', questionId], err => {
@@ -369,7 +507,7 @@ app.post('/api/questions/:questionId/update', (req, res) => {
   });
 });
 
-app.delete('/api/questions/:questionId', (req, res) => {
+app.delete('/api/questions/:questionId', requireAdminAuth, (req, res) => {
   const questionId = req.params.questionId;
   db.run('DELETE FROM options WHERE question_id = ?', [questionId], err => {
     if (err) return res.status(500).json({ error: err.message });
@@ -426,7 +564,7 @@ app.get('/api/tests/:testId/info', (req, res) => {
 });
 
 // Update a test (including schedule)
-app.put('/api/tests/:testId', (req, res) => {
+app.put('/api/tests/:testId', requireAdminAuth, (req, res) => {
   const testId = req.params.testId;
   const { name, description, duration_minutes, questions_per_attempt, instructions, max_attempts, access_key, type, start_time, end_time } = req.body;
   db.run(
@@ -668,7 +806,7 @@ app.post('/api/attempts/:attemptId/violation', (req, res) => {
   });
 });
 
-app.get('/api/attempts/:id', (req, res) => {
+app.get('/api/attempts/:id', requireAdminAuth, (req, res) => {
   db.get('SELECT a.*, t.name as test_name FROM attempts a JOIN tests t ON a.test_id = t.id WHERE a.id = ?', [req.params.id], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!row) return res.status(404).json({ error: 'Attempt not found' });
@@ -676,7 +814,7 @@ app.get('/api/attempts/:id', (req, res) => {
   });
 });
 
-app.get('/api/attempts', (req, res) => {
+app.get('/api/attempts', requireAdminAuth, (req, res) => {
   db.all('SELECT a.*, t.name AS test_name FROM attempts a JOIN tests t ON a.test_id = t.id WHERE a.status = "submitted" ORDER BY a.created_at DESC', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
@@ -691,9 +829,16 @@ function initDatabase(callback) {
   });
 }
 
-initDatabase((err) => {
+initDatabase(async (err) => {
   if (err) {
     console.error('Failed to initialize database schema:', err.message);
+    process.exit(1);
+  }
+
+  try {
+    await initializeAdminCredentials();
+  } catch (bootstrapErr) {
+    console.error('Failed to initialize admin credentials:', bootstrapErr.message);
     process.exit(1);
   }
 

@@ -293,8 +293,36 @@
     const adminContent = document.getElementById('adminContent');
     const loginError = document.getElementById('loginError');
     const loginBtn = document.getElementById('loginBtn');
+    const ADMIN_TOKEN_KEY = 'adminAuthToken';
+
+    function getAdminToken() {
+      return localStorage.getItem(ADMIN_TOKEN_KEY);
+    }
+
+    function setAdminToken(token) {
+      localStorage.setItem(ADMIN_TOKEN_KEY, token);
+    }
+
+    function clearAdminToken() {
+      localStorage.removeItem(ADMIN_TOKEN_KEY);
+    }
+
+    async function apiFetch(url, options = {}) {
+      const headers = new Headers(options.headers || {});
+      const token = getAdminToken();
+      if (token) headers.set('Authorization', `Bearer ${token}`);
+      const res = await fetch(url, { ...options, headers });
+      if (res.status === 401 || res.status === 403) {
+        clearAdminToken();
+        loginSection.style.display = 'block';
+        adminContent.style.display = 'none';
+        document.getElementById('adminHeaderStatus').style.setProperty('display', 'none', 'important');
+      }
+      return res;
+    }
 
     document.getElementById('adminLogoutBtn').addEventListener('click', () => {
+      clearAdminToken();
       location.reload();
     });
 
@@ -314,6 +342,13 @@
 
     tabs.forEach((t, i) => document.getElementById(t).addEventListener('click', (e) => { e.preventDefault(); switchTab(i); }));
 
+    if (getAdminToken()) {
+      loginSection.style.display = 'none';
+      adminContent.style.display = 'block';
+      document.getElementById('adminHeaderStatus').style.setProperty('display', 'block', 'important');
+      initAdmin();
+    }
+
     // Login Logic (SERVER SIDE)
     loginBtn.addEventListener('click', async () => {
       const password = document.getElementById('adminPassword').value;
@@ -325,7 +360,8 @@
         });
         const data = await res.json();
         
-        if (data.success) {
+        if (data.success && data.token) {
+          setAdminToken(data.token);
           loginSection.style.display = 'none';
           adminContent.style.display = 'block';
           loginError.style.display = 'none';
@@ -340,7 +376,7 @@
     });
 
     async function loadTests() {
-      const res = await fetch('/api/tests');
+      const res = await apiFetch('/api/tests');
       const tests = await res.json();
       const list = document.getElementById('testsList');
       list.innerHTML = '';
@@ -359,7 +395,7 @@
 
     async function loadTestDetails(testId) {
       cancelEdit(); // Reset form when loading new test details
-      const resMeta = await fetch(`/api/tests/${testId}/info`);
+      const resMeta = await apiFetch(`/api/tests/${testId}/info`);
       const meta = await resMeta.json();
       if (meta) {
         document.getElementById('testName').value = meta.name;
@@ -391,7 +427,7 @@
         }
       }
 
-      const res = await fetch(`/api/tests/${testId}/questions-full`);
+      const res = await apiFetch(`/api/tests/${testId}/questions-full`);
       const questions = await res.json();
       const container = document.getElementById('questionList');
       container.innerHTML = '';
@@ -417,7 +453,7 @@
         delBtn.onclick = async (e) => {
           e.stopPropagation();
           if(!confirm('Delete?')) return;
-          await fetch(`/api/questions/${q.id}`, { method: 'DELETE' });
+          await apiFetch(`/api/questions/${q.id}`, { method: 'DELETE' });
           loadTestDetails(testId);
         };
 
@@ -491,7 +527,7 @@
     }
 
     async function loadAnalytics() {
-      const res = await fetch('/api/analytics');
+      const res = await apiFetch('/api/analytics');
       const stats = await res.json();
       const grid = document.getElementById('analyticsGrid');
       grid.innerHTML = '';
@@ -506,7 +542,7 @@
     }
 
     async function loadAttempts() {
-      const res = await fetch('/api/attempts');
+      const res = await apiFetch('/api/attempts');
       const attempts = await res.json();
       const body = document.getElementById('attemptsBody');
       body.innerHTML = '';
@@ -518,7 +554,7 @@
     }
 
     async function loadStudents() {
-      const res = await fetch('/api/students');
+      const res = await apiFetch('/api/students');
       const students = await res.json();
       const body = document.getElementById('studentsBody');
       body.innerHTML = '';
@@ -542,12 +578,12 @@
 
     async function deleteStudent(id) {
       if (!confirm('Delete this student account? They will lose access.')) return;
-      await fetch(`/api/students/${id}`, { method: 'DELETE' });
+      await apiFetch(`/api/students/${id}`, { method: 'DELETE' });
       loadStudents();
     }
 
     async function loadLive() {
-      const res = await fetch('/api/live');
+      const res = await apiFetch('/api/live');
       const live = await res.json();
       const body = document.getElementById('liveBody');
       body.innerHTML = '';
@@ -565,16 +601,25 @@
     function initAdmin() {
       // Update Admin Password (SERVER SIDE)
       document.getElementById('updateAdminPhraseBtn').addEventListener('click', async () => {
-        const val = document.getElementById('adminPhraseSetting').value.trim();
-        if (!val) {
+        const newPassword = document.getElementById('adminPhraseSetting').value.trim();
+        if (!newPassword) {
           alert('Enter a new admin phrase');
           return;
         }
-        await fetch('/api/admin/update-password', {
+        const currentPassword = prompt('Enter current admin phrase to confirm change:');
+        if (!currentPassword) return;
+
+        const res = await apiFetch('/api/admin/update-password', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ password: val })
+          body: JSON.stringify({ currentPassword, newPassword })
         });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Unable to update admin phrase');
+          return;
+        }
+
         document.getElementById('adminPhraseSetting').value = '';
         alert('Admin phrase updated globally (Server-Side).');
       });
@@ -609,9 +654,9 @@
 
         const currentTestId = document.getElementById('testsList').value;
         if (currentTestId) {
-          await fetch(`/api/tests/${currentTestId}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+          await apiFetch(`/api/tests/${currentTestId}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
         } else {
-          await fetch('/api/tests', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+          await apiFetch('/api/tests', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
         }
         alert('Test saved');
         loadTests();
@@ -624,7 +669,7 @@
         if (!file) return alert('Select a file');
         const fd = new FormData();
         fd.append('file', file);
-        const res = await fetch(`/api/tests/${testId}/import`, { method: 'POST', body: fd });
+        const res = await apiFetch(`/api/tests/${testId}/import`, { method: 'POST', body: fd });
         const data = await res.json();
         alert('Imported ' + data.count + ' questions');
         loadTestDetails(testId);
@@ -650,7 +695,7 @@
 
         if (editingQuestionId) {
            const payload = { text, marks, question_type: qType, options };
-           await fetch(`/api/questions/${editingQuestionId}/update`, {
+           await apiFetch(`/api/questions/${editingQuestionId}/update`, {
              method: 'POST',
              headers: {'Content-Type': 'application/json'},
              body: JSON.stringify(payload)
@@ -665,7 +710,7 @@
            fd.append('options', JSON.stringify(options));
            if (file) fd.append('image', file);
 
-           await fetch(`/api/tests/${testId}/questions`, { method: 'POST', body: fd });
+           await apiFetch(`/api/tests/${testId}/questions`, { method: 'POST', body: fd });
            alert('Question added');
 
            // Reset fields
@@ -682,7 +727,7 @@
       document.getElementById('duplicateTestBtn').onclick = async () => {
         const id = document.getElementById('testsList').value;
         if(confirm('Duplicate?')) {
-          await fetch(`/api/tests/${id}/duplicate`, { method: 'POST' });
+          await apiFetch(`/api/tests/${id}/duplicate`, { method: 'POST' });
           alert('Duplicated');
           loadTests();
         }
@@ -691,7 +736,7 @@
       document.getElementById('deleteTestBtn').onclick = async () => {
         const id = document.getElementById('testsList').value;
         if(confirm('Delete?')) {
-          await fetch(`/api/tests/${id}`, { method: 'DELETE' });
+          await apiFetch(`/api/tests/${id}`, { method: 'DELETE' });
           loadTests();
         }
       };

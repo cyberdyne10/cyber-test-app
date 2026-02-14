@@ -55,7 +55,23 @@ node -e "const fs=require('fs'); const db=require('./db'); const schema=fs.readF
 
 This creates `data.db` with the necessary tables.
 
-### 3. Run the app
+### 3. Configure environment (recommended)
+
+Create a `.env`/environment variables with:
+
+- `PORT` (optional, default `3000`)
+- `NODE_ENV` (`development` or `production`)
+- `ADMIN_PASSWORD` (**required for first production bootstrap** if no admin hash exists)
+- `ADMIN_JWT_SECRET` (**required in production**)
+- `ADMIN_TOKEN_EXPIRY` (optional, default `2h`)
+- `ADMIN_BCRYPT_ROUNDS` (optional, default `12`)
+- `CORS_ORIGIN` (comma-separated allowed origins in production, e.g. `https://example.com`)
+
+> First-run bootstrap behavior:
+> - If no admin password hash exists, server initializes one from `ADMIN_PASSWORD`.
+> - In non-production only, if `ADMIN_PASSWORD` is missing, a local default is used and warning is logged. Change it immediately.
+
+### 4. Run the app
 
 ```bash
 npm start
@@ -71,6 +87,18 @@ http://localhost:3000
 
 ---
 
+## Seeding the 18x100 Cyber Question Bank
+
+This project includes an idempotent seed script that creates/updates 18 dedicated exams and inserts exactly 100 MCQs per exam (1,800 questions total, 7,200 options total).
+
+Run:
+
+```bash
+npm run seed:question-bank
+```
+
+Re-running is safe: for each managed exam, existing questions/options are replaced and re-seeded to exact counts.
+
 ## Usage
 
 ### Student Flow
@@ -84,45 +112,26 @@ http://localhost:3000
 
 ### Teacher/Admin Flow
 
-1. Go to `http://localhost:3000/admin.html`.
-2. **Create a test**:
-   - Enter test name and optional description.
-   - Click **Create Test**.
-3. **Add questions**:
-   - Select a test from the dropdown.
-   - Enter the question text.
-   - Enter up to 4 options.
-   - Choose the correct option from the dropdown.
-   - Click **Add Question**.
-4. **View attempts**:
-   - Scroll to **Recent Attempts** table.
-   - See student name, ID, test, score, total, and timestamp.
+1. Go to `http://localhost:3000/admin.html` and login with admin password.
+2. A short-lived admin token is issued and used for protected admin API calls.
+3. **Create/update tests and questions** as before.
+4. **Change admin password** from Settings (requires current password + strong new password).
+5. **View attempts/analytics/live/students/export** from admin panel.
 
 ---
 
 ## Tech Notes
 
 - Database: SQLite (file-based, `data.db` in project root).
-- API endpoints (examples):
-  - `GET /api/tests` – list tests
-  - `POST /api/tests` – create test
-  - `POST /api/tests/:testId/questions` – add question with options
-  - `GET /api/tests/:testId/full` – test with questions + options
-  - `POST /api/tests/:testId/submit` – submit answers + auto-mark
-  - `GET /api/attempts` – list attempts
-
-CORS is currently open for local development.
-
----
-
-## Roadmap / Ideas
-
-- Add login/auth for teachers
-- Question randomization and per-student shuffling
-- Timed tests and countdowns
-- More question types (true/false, multi-select, short answer)
-- Export attempts to CSV/Excel
-- Basic anti-cheat measures (per-question timers, navigation controls)
+- Admin password storage uses bcrypt hash (`admin_settings.key='password_hash'`).
+- Backward-compatible migration:
+  - Existing plaintext `admin_settings.key='password'` is still recognized.
+  - On successful admin login/password update, plaintext is migrated to bcrypt hash.
+- Admin auth uses JWT bearer token with expiry.
+- Protected admin endpoints include test create/update/delete/duplicate/import, question management, analytics/live/attempts, student listing/deletion, CSV export, and admin password update.
+- Student flows (`/api/auth/*`, taking/submitting tests) remain unaffected.
+- Login endpoint (`POST /api/admin/login`) has basic rate limiting.
+- Security headers via Helmet; CORS is strict in production (allowlist via `CORS_ORIGIN`).
 
 ---
 
