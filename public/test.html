@@ -130,14 +130,15 @@
         q.options.forEach((o, optIdx) => {
           const label = document.createElement('label');
           label.className = 'option-pill mb-2';
-          const radio = document.createElement('input');
-          radio.type = 'radio';
-          radio.name = 'q_' + q.id;
-          radio.value = o.id;
+          const input = document.createElement('input');
+          input.type = q.question_type === 'multiple' ? 'checkbox' : 'radio';
+          input.name = 'q_' + q.id;
+          input.value = o.id;
+          input.style.marginRight = '8px'; // Spacing
           
           // Instant Feedback for Practice Mode
           if (isPractice) {
-            radio.addEventListener('change', () => {
+            input.addEventListener('change', () => {
               // Highlight immediately
               // We don't have is_correct here to prevent cheating in source, 
               // but practice mode implies learning. 
@@ -153,7 +154,7 @@
           const textNode = document.createElement('span');
           textNode.textContent = o.text;
 
-          label.appendChild(radio);
+          label.appendChild(input);
           label.appendChild(key);
           label.appendChild(textNode);
           optWrapper.appendChild(label);
