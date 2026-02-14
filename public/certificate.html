@@ -144,7 +144,10 @@
     if (!attemptId) {
       document.body.innerHTML = '<div class="text-center p-5">Invalid Certificate Link</div>';
     } else {
-      fetch(`/api/attempts/${attemptId}`)
+      const token = localStorage.getItem('adminAuthToken');
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
+      fetch(`/api/attempts/${attemptId}`, { headers: authHeaders })
         .then(res => res.json())
         .then(data => {
           if (data.error) {

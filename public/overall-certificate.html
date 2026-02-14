@@ -157,11 +157,19 @@
     if (!studentId) {
       document.body.innerHTML = '<div class="text-center p-5">Invalid Overall Certificate Link</div>';
     } else {
+      const token = localStorage.getItem('adminAuthToken');
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
       Promise.all([
-        fetch('/api/students').then(r => r.json()),
-        fetch(`/api/student/${studentId}/history`).then(r => r.json())
+        fetch('/api/students', { headers: authHeaders }).then(r => r.json()),
+        fetch(`/api/student/${studentId}/history`, { headers: authHeaders }).then(r => r.json())
       ])
       .then(([students, attempts]) => {
+        if (!Array.isArray(students) || !Array.isArray(attempts)) {
+          document.body.innerHTML = '<div class="text-center p-5">Admin login required to view this certificate.</div>';
+          return;
+        }
+
         const s = students.find(x => x.id == studentId);
         if (!s) {
           document.body.innerHTML = '<div class="text-center p-5">Student not found.</div>';

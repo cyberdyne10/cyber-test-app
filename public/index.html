@@ -246,7 +246,7 @@
       });
       const data = await res.json();
       if (data.success) {
-        currentUser = { id: data.id, name, username };
+        currentUser = { id: data.id, name: data.name || name, username: data.username || username, reg_number: data.reg_number };
         localStorage.setItem('cln_student_user', JSON.stringify(currentUser));
         showLoggedInState();
         authModal.classList.add('hidden');

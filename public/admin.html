@@ -217,7 +217,7 @@
         <div id="view-analytics" class="hidden">
           <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="h5 m-0">Performance Overview</h3>
-            <a href="/api/export/csv" class="btn btn-sm btn-success">Download Full CSV Export</a>
+            <button id="downloadCsvBtn" class="btn btn-sm btn-success">Download Full CSV Export</button>
           </div>
           <div id="analyticsGrid" class="row-grid mb-5"></div>
           <h3 class="h6 text-uppercase text-muted mb-3" style="letter-spacing:0.15em;">Submitted Attempts</h3>
@@ -599,6 +599,23 @@
     }
 
     function initAdmin() {
+      document.getElementById('downloadCsvBtn').addEventListener('click', async () => {
+        const res = await apiFetch('/api/export/csv');
+        if (!res.ok) {
+          alert('Failed to download CSV export');
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'exam_results.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      });
+
       // Update Admin Password (SERVER SIDE)
       document.getElementById('updateAdminPhraseBtn').addEventListener('click', async () => {
         const newPassword = document.getElementById('adminPhraseSetting').value.trim();

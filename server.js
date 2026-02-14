@@ -96,6 +96,10 @@ function isLikelyBcryptHash(value) {
   return typeof value === 'string' && /^\$2[aby]\$\d{2}\$/.test(value);
 }
 
+function isStrongStudentPassword(password) {
+  return typeof password === 'string' && password.length >= 8;
+}
+
 function isStrongAdminPassword(password) {
   if (typeof password !== 'string') return false;
   return password.length >= 12 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password) && /[^A-Za-z0-9]/.test(password);
@@ -231,40 +235,66 @@ app.post('/api/admin/update-password', requireAdminAuth, async (req, res) => {
 });
 
 // STUDENT AUTH ROUTES
-app.post('/api/auth/register', (req, res) => {
-  const { name, username, password } = req.body;
-  if (!name || !username || !password) return res.status(400).json({ error: 'Missing fields' });
-  
-  db.run('INSERT INTO students (name, username, password) VALUES (?, ?, ?)', [name, username, password], function(err) {
-    if (err) return res.status(400).json({ error: 'Username likely taken' });
-    
-    const studentId = this.lastID;
-    const regNum = generateRegNumber(studentId);
-    
-    db.run('UPDATE students SET reg_number = ? WHERE id = ?', [regNum, studentId], (err2) => {
-      if (err2) console.error('Error setting reg number', err2);
-      res.json({ success: true, id: studentId, name, username, reg_number: regNum });
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { name, username, password } = req.body;
+    if (!name || !username || !password) return res.status(400).json({ error: 'Missing fields' });
+    if (!isStrongStudentPassword(password)) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    db.run('INSERT INTO students (name, username, password) VALUES (?, ?, ?)', [name, username, passwordHash], function(err) {
+      if (err) return res.status(400).json({ error: 'Username likely taken' });
+
+      const studentId = this.lastID;
+      const regNum = generateRegNumber(studentId);
+
+      db.run('UPDATE students SET reg_number = ? WHERE id = ?', [regNum, studentId], (err2) => {
+        if (err2) console.error('Error setting reg number', err2);
+        res.json({ success: true, id: studentId, name, username, reg_number: regNum });
+      });
     });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/auth/login', (req, res) => {
   const { username, password } = req.body;
-  db.get('SELECT * FROM students WHERE username = ? AND password = ?', [username, password], (err, row) => {
+  if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
+
+  db.get('SELECT * FROM students WHERE username = ?', [username], async (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!row) return res.status(401).json({ error: 'Invalid credentials' });
-    
+
+    let valid = false;
+
+    if (isLikelyBcryptHash(row.password)) {
+      valid = await bcrypt.compare(password, row.password);
+    } else {
+      // Backward-compatible migration from plaintext passwords.
+      valid = password === row.password;
+      if (valid) {
+        const migratedHash = await bcrypt.hash(password, 10);
+        db.run('UPDATE students SET password = ? WHERE id = ?', [migratedHash, row.id]);
+      }
+    }
+
+    if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
+
     if (!row.reg_number) {
       const newReg = generateRegNumber(row.id);
       db.run('UPDATE students SET reg_number = ? WHERE id = ?', [newReg, row.id]);
       row.reg_number = newReg;
     }
-    
+
     res.json({ success: true, student: { id: row.id, name: row.name, username: row.username, reg_number: row.reg_number } });
   });
 });
 
-app.get('/api/student/:id/history', (req, res) => {
+app.get('/api/student/:id/history', requireAdminAuth, (req, res) => {
   db.all(
     `SELECT a.*, t.name as test_name, t.id as test_id
      FROM attempts a 
@@ -848,6 +878,38 @@ function initDatabase(callback) {
   });
 }
 
+async function ensureColumn(tableName, columnName, alterSql) {
+  const columns = await new Promise((resolve, reject) => {
+    db.all(`PRAGMA table_info(${tableName})`, [], (err, rows) => err ? reject(err) : resolve(rows || []));
+  });
+
+  const exists = columns.some(c => c.name === columnName);
+  if (!exists) {
+    await dbRunAsync(alterSql);
+    console.log(`[DB] Added missing column ${tableName}.${columnName}`);
+  }
+}
+
+async function runMigrations() {
+  await ensureColumn('students', 'reg_number', 'ALTER TABLE students ADD COLUMN reg_number TEXT');
+
+  await ensureColumn('tests', 'questions_per_attempt', 'ALTER TABLE tests ADD COLUMN questions_per_attempt INTEGER');
+  await ensureColumn('tests', 'instructions', 'ALTER TABLE tests ADD COLUMN instructions TEXT');
+  await ensureColumn('tests', 'max_attempts', 'ALTER TABLE tests ADD COLUMN max_attempts INTEGER');
+  await ensureColumn('tests', 'access_key', 'ALTER TABLE tests ADD COLUMN access_key TEXT');
+  await ensureColumn('tests', 'type', `ALTER TABLE tests ADD COLUMN type TEXT DEFAULT 'exam'`);
+  await ensureColumn('tests', 'start_time', 'ALTER TABLE tests ADD COLUMN start_time DATETIME');
+  await ensureColumn('tests', 'end_time', 'ALTER TABLE tests ADD COLUMN end_time DATETIME');
+
+  await ensureColumn('questions', 'marks', 'ALTER TABLE questions ADD COLUMN marks INTEGER DEFAULT 1');
+  await ensureColumn('questions', 'image_url', 'ALTER TABLE questions ADD COLUMN image_url TEXT');
+  await ensureColumn('questions', 'question_type', `ALTER TABLE questions ADD COLUMN question_type TEXT DEFAULT 'single'`);
+
+  await ensureColumn('attempts', 'student_db_id', 'ALTER TABLE attempts ADD COLUMN student_db_id INTEGER');
+  await ensureColumn('attempts', 'status', `ALTER TABLE attempts ADD COLUMN status TEXT DEFAULT 'submitted'`);
+  await ensureColumn('attempts', 'violations', 'ALTER TABLE attempts ADD COLUMN violations INTEGER DEFAULT 0');
+}
+
 initDatabase(async (err) => {
   if (err) {
     console.error('Failed to initialize database schema:', err.message);
@@ -855,6 +917,7 @@ initDatabase(async (err) => {
   }
 
   try {
+    await runMigrations();
     await initializeAdminCredentials();
   } catch (bootstrapErr) {
     console.error('Failed to initialize admin credentials:', bootstrapErr.message);
