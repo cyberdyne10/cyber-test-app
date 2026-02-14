@@ -313,12 +313,13 @@ app.post('/api/tests/:testId/questions', upload.single('image'), (req, res) => {
   const testId = req.params.testId;
   const text = req.body.text;
   const marks = req.body.marks || 1;
+  const questionType = req.body.question_type || 'single';
   let options = [];
   try { options = JSON.parse(req.body.options); } catch(e) {}
 
   const imageUrl = req.file ? '/uploads/' + req.file.filename : null;
 
-  db.run('INSERT INTO questions (test_id, text, marks, image_url) VALUES (?, ?, ?, ?)', [testId, text, marks, imageUrl], function(err) {
+  db.run('INSERT INTO questions (test_id, text, marks, image_url, question_type) VALUES (?, ?, ?, ?, ?)', [testId, text, marks, imageUrl, questionType], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     const questionId = this.lastID;
     const stmt = db.prepare('INSERT INTO options (question_id, text, is_correct) VALUES (?, ?, ?)');
@@ -333,7 +334,7 @@ app.post('/api/tests/:testId/questions', upload.single('image'), (req, res) => {
 app.get('/api/tests/:testId/questions-full', (req, res) => {
   const testId = req.params.testId;
   db.all(
-    `SELECT q.id as question_id, q.text as question_text, q.marks, q.image_url,
+    `SELECT q.id as question_id, q.text as question_text, q.marks, q.image_url, q.question_type,
             o.id as option_id, o.text as option_text, o.is_correct
      FROM questions q
      JOIN options o ON q.id = o.question_id
@@ -345,7 +346,7 @@ app.get('/api/tests/:testId/questions-full', (req, res) => {
       const questions = {};
       rows.forEach(r => {
         if (!questions[r.question_id]) {
-          questions[r.question_id] = { id: r.question_id, text: r.question_text, marks: r.marks, image_url: r.image_url, options: [] };
+          questions[r.question_id] = { id: r.question_id, text: r.question_text, marks: r.marks, image_url: r.image_url, question_type: r.question_type || 'single', options: [] };
         }
         questions[r.question_id].options.push({ id: r.option_id, text: r.option_text, is_correct: r.is_correct === 1 });
       });
@@ -356,8 +357,8 @@ app.get('/api/tests/:testId/questions-full', (req, res) => {
 
 app.post('/api/questions/:questionId/update', (req, res) => {
   const questionId = req.params.questionId;
-  const { text, marks, options } = req.body; 
-  db.run('UPDATE questions SET text = ?, marks = ? WHERE id = ?', [text, marks || 1, questionId], err => {
+  const { text, marks, options, question_type } = req.body;
+  db.run('UPDATE questions SET text = ?, marks = ?, question_type = ? WHERE id = ?', [text, marks || 1, question_type || 'single', questionId], err => {
     if (err) return res.status(500).json({ error: err.message });
     const stmt = db.prepare('UPDATE options SET text = ?, is_correct = ? WHERE id = ?');
     for (const opt of options) { if (opt.id) stmt.run(opt.text, opt.is_correct ? 1 : 0, opt.id); }
@@ -468,7 +469,7 @@ app.get('/api/tests/:testId/full', (req, res) => {
     if (!testRow) return res.status(404).json({ error: 'Test not found' });
 
     db.all(
-      `SELECT q.id as question_id, q.text as question_text, q.marks, q.image_url,
+      `SELECT q.id as question_id, q.text as question_text, q.marks, q.image_url, q.question_type,
               o.id as option_id, o.text as option_text
        FROM questions q
        JOIN options o ON q.id = o.question_id
@@ -479,7 +480,7 @@ app.get('/api/tests/:testId/full', (req, res) => {
         const questionsMap = {};
         rows.forEach(r => {
           if (!questionsMap[r.question_id]) {
-            questionsMap[r.question_id] = { id: r.question_id, text: r.question_text, marks: r.marks, image_url: r.image_url, options: [] };
+            questionsMap[r.question_id] = { id: r.question_id, text: r.question_text, marks: r.marks, image_url: r.image_url, question_type: r.question_type || 'single', options: [] };
           }
           questionsMap[r.question_id].options.push({ id: r.option_id, text: r.option_text });
         });
@@ -524,7 +525,7 @@ app.post('/api/tests/:testId/submit', (req, res) => {
       const qPlaceholders = qIds.map(() => '?').join(',');
 
       db.all(
-        `SELECT id, text, marks FROM questions WHERE id IN (${qPlaceholders})`,
+        `SELECT id, text, marks, question_type FROM questions WHERE id IN (${qPlaceholders})`,
         qIds,
         (errQ, qRows) => {
           if (errQ) return res.status(500).json({ error: errQ.message });
@@ -535,33 +536,64 @@ app.post('/api/tests/:testId/submit', (req, res) => {
           let totalPossible = 0;
           const detailed = [];
 
+          const answersByQuestion = {};
           answers.forEach(a => {
-            const qData = questionMap[a.question_id];
-            if (!qData) return;
-            const qMarks = qData.marks || 1;
-            totalPossible += qMarks;
-            const selected = optionMap[a.option_id];
-            let isCorrect = false;
-            if (selected && selected.question_id === a.question_id && selected.is_correct === 1) {
-              isCorrect = true;
-              score += qMarks;
-            }
-            detailed.push({
-              question_id: a.question_id,
-              question_text: qData.text,
-              marks: qMarks,
-              selected_option: selected ? { text: selected.text, is_correct: isCorrect } : null,
-              correct_option: null 
-            });
+            if (!answersByQuestion[a.question_id]) answersByQuestion[a.question_id] = [];
+            answersByQuestion[a.question_id].push(parseInt(a.option_id));
           });
 
           db.all(
-            `SELECT question_id, text FROM options WHERE question_id IN (${qPlaceholders}) AND is_correct = 1`,
+            `SELECT question_id, id as option_id, text FROM options WHERE question_id IN (${qPlaceholders}) AND is_correct = 1`,
             qIds,
             (errC, correctRows) => {
-               const correctMap = {};
-               correctRows.forEach(r => correctMap[r.question_id] = r.text);
-               detailed.forEach(d => { d.correct_option = { text: correctMap[d.question_id] || 'Unknown' }; });
+               const correctOptionsMap = {};
+               correctRows.forEach(r => {
+                 if (!correctOptionsMap[r.question_id]) correctOptionsMap[r.question_id] = [];
+                 correctOptionsMap[r.question_id].push(r);
+               });
+
+               for (const qIdStr in answersByQuestion) {
+                 const qId = parseInt(qIdStr);
+                 const qData = questionMap[qId];
+                 if (!qData) continue;
+
+                 const userSelectedOptionIds = answersByQuestion[qId];
+                 const correctOpts = correctOptionsMap[qId] || [];
+                 const correctOptIds = correctOpts.map(o => o.option_id);
+
+                 const qMarks = qData.marks || 1;
+                 totalPossible += qMarks;
+
+                 let isCorrect = false;
+                 let selectedTexts = [];
+
+                 userSelectedOptionIds.forEach(oid => {
+                    const opt = optionMap[oid];
+                    if(opt) selectedTexts.push(opt.text);
+                 });
+
+                 if (qData.question_type === 'multiple') {
+                    const userSet = new Set(userSelectedOptionIds);
+                    const correctSet = new Set(correctOptIds);
+                    if (userSet.size === correctSet.size && [...userSet].every(x => correctSet.has(x))) {
+                      isCorrect = true;
+                      score += qMarks;
+                    }
+                 } else {
+                    if (userSelectedOptionIds.length === 1 && correctOptIds.includes(userSelectedOptionIds[0])) {
+                       isCorrect = true;
+                       score += qMarks;
+                    }
+                 }
+
+                 detailed.push({
+                   question_id: qId,
+                   question_text: qData.text,
+                   marks: qMarks,
+                   selected_option: { text: selectedTexts.join(', '), is_correct: isCorrect },
+                   correct_option: { text: correctOpts.map(c => c.text).join(', ') }
+                 });
+               }
 
                // Check test type: practice mode should NOT create or update attempts
                db.get('SELECT type FROM tests WHERE id = ?', [testId], (errT, testRow) => {
