@@ -323,7 +323,7 @@
 
     document.getElementById('adminLogoutBtn').addEventListener('click', () => {
       clearAdminToken();
-      location.reload();
+      window.location.href = '/';
     });
 
     // Tab Logic
