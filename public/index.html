@@ -224,6 +224,29 @@
       });
       const data = await res.json();
       if (data.success) {
+        if (data.force_password_change) {
+          const newPassword = prompt('Your password was reset by admin. Enter a new password (minimum 8 characters):');
+          if (!newPassword) {
+            alert('Password change is required before continuing.');
+            return;
+          }
+
+          const changeRes = await fetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ username, currentPassword: password, newPassword })
+          });
+          const changeData = await changeRes.json();
+
+          if (!changeRes.ok || !changeData.success) {
+            alert(changeData.error || 'Failed to change password. Please try again.');
+            return;
+          }
+
+          alert('Password updated successfully. Please login again with your new password.');
+          return;
+        }
+
         currentUser = data.student;
         localStorage.setItem('cln_student_user', JSON.stringify(currentUser));
         showLoggedInState();

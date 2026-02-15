@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS students (
   name TEXT NOT NULL,
   username TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
-  reg_number TEXT
+  reg_number TEXT,
+  must_change_password INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS tests (

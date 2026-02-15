@@ -316,8 +316,43 @@ app.post('/api/auth/login', (req, res) => {
       row.reg_number = newReg;
     }
 
-    res.json({ success: true, student: { id: row.id, name: row.name, username: row.username, reg_number: row.reg_number } });
+    res.json({
+      success: true,
+      force_password_change: Number(row.must_change_password || 0) === 1,
+      student: { id: row.id, name: row.name, username: row.username, reg_number: row.reg_number }
+    });
   });
+});
+
+app.post('/api/auth/change-password', async (req, res) => {
+  try {
+    const { username, currentPassword, newPassword } = req.body;
+    if (!username || !currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Missing fields' });
+    }
+    if (!isStrongStudentPassword(newPassword)) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+    }
+
+    const row = await dbGetAsync('SELECT * FROM students WHERE username = ?', [username]);
+    if (!row) return res.status(404).json({ error: 'Student not found' });
+
+    let valid = false;
+    if (isLikelyBcryptHash(row.password)) {
+      valid = await bcrypt.compare(currentPassword, row.password);
+    } else {
+      valid = currentPassword === row.password;
+    }
+
+    if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+
+    const nextHash = await bcrypt.hash(newPassword, 10);
+    await dbRunAsync('UPDATE students SET password = ?, must_change_password = 0 WHERE id = ?', [nextHash, row.id]);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/student/:id/history', requireAdminAuth, (req, res) => {
@@ -337,10 +372,31 @@ app.get('/api/student/:id/history', requireAdminAuth, (req, res) => {
 
 // List all students
 app.get('/api/students', requireAdminAuth, (req, res) => {
-  db.all('SELECT id, name, username, reg_number FROM students ORDER BY id DESC', [], (err, rows) => {
+  db.all('SELECT id, name, username, reg_number, must_change_password FROM students ORDER BY id DESC', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
+});
+
+app.post('/api/students/:id/reset-password', requireAdminAuth, async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    const { newPassword } = req.body;
+
+    if (!newPassword || !isStrongStudentPassword(newPassword)) {
+      return res.status(400).json({ error: 'Temporary password must be at least 8 characters.' });
+    }
+
+    const student = await dbGetAsync('SELECT id FROM students WHERE id = ?', [studentId]);
+    if (!student) return res.status(404).json({ error: 'Student not found' });
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await dbRunAsync('UPDATE students SET password = ?, must_change_password = 1 WHERE id = ?', [hash, studentId]);
+
+    res.json({ success: true, message: 'Student password reset. Student will be forced to change password on next login.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Delete Student
@@ -918,6 +974,7 @@ async function ensureColumn(tableName, columnName, alterSql) {
 
 async function runMigrations() {
   await ensureColumn('students', 'reg_number', 'ALTER TABLE students ADD COLUMN reg_number TEXT');
+  await ensureColumn('students', 'must_change_password', 'ALTER TABLE students ADD COLUMN must_change_password INTEGER DEFAULT 0');
 
   await ensureColumn('tests', 'questions_per_attempt', 'ALTER TABLE tests ADD COLUMN questions_per_attempt INTEGER');
   await ensureColumn('tests', 'instructions', 'ALTER TABLE tests ADD COLUMN instructions TEXT');
