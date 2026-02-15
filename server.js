@@ -11,6 +11,7 @@ const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const { spawnSync } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -160,6 +161,31 @@ async function initializeAdminCredentials() {
 
   const hash = await bcrypt.hash(bootstrapPassword, BCRYPT_ROUNDS);
   await dbRunAsync("INSERT OR REPLACE INTO admin_settings (key, value) VALUES ('password_hash', ?)", [hash]);
+}
+
+async function autoSeedQuestionBankIfNeeded() {
+  const autoSeedEnabled = (process.env.AUTO_SEED_QUESTION_BANK || 'true').toLowerCase() === 'true';
+  if (!autoSeedEnabled) return;
+
+  const markerKey = 'question_bank_seeded_v1';
+  const marker = await dbGetAsync("SELECT value FROM admin_settings WHERE key = ?", [markerKey]);
+  if (marker && marker.value) {
+    console.log('[SEED] Question bank already seeded. Skipping auto-seed.');
+    return;
+  }
+
+  console.log('[SEED] Running one-time question bank seed (18 topics x 100 MCQs)...');
+  const result = spawnSync(process.execPath, [path.join(__dirname, 'seed_question_bank_18x100.js')], {
+    stdio: 'inherit',
+    env: process.env
+  });
+
+  if (result.status !== 0) {
+    throw new Error('Question bank auto-seed failed.');
+  }
+
+  await dbRunAsync("INSERT OR REPLACE INTO admin_settings (key, value) VALUES (?, ?)", [markerKey, new Date().toISOString()]);
+  console.log('[SEED] Question bank seed complete.');
 }
 
 const adminLoginLimiter = rateLimit({
@@ -919,8 +945,9 @@ initDatabase(async (err) => {
   try {
     await runMigrations();
     await initializeAdminCredentials();
+    await autoSeedQuestionBankIfNeeded();
   } catch (bootstrapErr) {
-    console.error('Failed to initialize admin credentials:', bootstrapErr.message);
+    console.error('Failed during startup initialization:', bootstrapErr.message);
     process.exit(1);
   }
 
