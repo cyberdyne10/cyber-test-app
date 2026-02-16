@@ -51,6 +51,41 @@
       color: var(--text);
     }
 
+    /* Dark-mode fixes for form elements + file inputs (Bootstrap doesn't fully cover these) */
+    body.admin-dark .form-control,
+    body.admin-dark .form-select,
+    body.admin-dark textarea,
+    body.admin-dark input[type="file"] {
+      background-color: rgba(2, 6, 23, 0.35) !important;
+      border-color: var(--border) !important;
+      color: var(--text) !important;
+    }
+    body.admin-dark .form-control::placeholder,
+    body.admin-dark textarea::placeholder {
+      color: rgba(148,163,184,0.85) !important;
+    }
+    body.admin-dark .input-group-text {
+      background: rgba(2, 6, 23, 0.25) !important;
+      border-color: var(--border) !important;
+      color: var(--text) !important;
+    }
+    body.admin-dark .card-soft,
+    body.admin-dark .kpi,
+    body.admin-dark .admin-topbar,
+    body.admin-dark .admin-sidebar {
+      backdrop-filter: blur(8px);
+    }
+    body.admin-dark .btn-outline-primary,
+    body.admin-dark .btn-outline-danger,
+    body.admin-dark .btn-outline-warning,
+    body.admin-dark .btn-outline-success,
+    body.admin-dark .btn-outline-secondary {
+      color: var(--text);
+    }
+    body.admin-dark .text-muted { color: var(--muted) !important; }
+    body.admin-dark .badge.bg-warning.text-dark { color: #0b1220 !important; }
+
+
     .admin-shell {
       min-height: 100vh;
       display: flex;
@@ -715,6 +750,9 @@
     function applyTheme(theme) {
       const isDark = theme === 'dark';
       document.body.classList.toggle('admin-dark', isDark);
+      // Let Bootstrap 5.3 theme its components (inputs, selects, etc.)
+      document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
+
       const t = document.getElementById('themeToggleText');
       const ico = document.querySelector('#themeToggle i');
       if (t) t.textContent = isDark ? 'Light' : 'Dark';
