@@ -61,6 +61,11 @@ app.use(cors({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Lightweight health check for connection indicator
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, ts: new Date().toISOString() });
+});
+
 // Helper to generate Reg Number
 function generateRegNumber(id) {
   const year = new Date().getFullYear();
@@ -394,6 +399,26 @@ app.post('/api/students/:id/reset-password', requireAdminAuth, async (req, res) 
     await dbRunAsync('UPDATE students SET password = ?, must_change_password = 1 WHERE id = ?', [hash, studentId]);
 
     res.json({ success: true, message: 'Student password reset. Student will be forced to change password on next login.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update Student (name)
+app.put('/api/students/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    const { name } = req.body;
+
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const student = await dbGetAsync('SELECT id FROM students WHERE id = ?', [studentId]);
+    if (!student) return res.status(404).json({ error: 'Student not found' });
+
+    await dbRunAsync('UPDATE students SET name = ? WHERE id = ?', [name.trim(), studentId]);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
