@@ -261,6 +261,36 @@
       box-shadow: var(--shadow);
     }
 
+    .admin-soft-panel {
+      padding: 12px;
+      background: var(--surface-2);
+      border-color: var(--border-2);
+    }
+
+    .qb-question-item {
+      padding: 10px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border-2);
+      margin-bottom: 8px;
+      cursor: pointer;
+      background: var(--surface);
+    }
+
+    body.admin-dark .qb-question-item {
+      border-color: var(--border);
+    }
+
+    body.admin-dark input[type="file"]::file-selector-button {
+      background: rgba(2, 6, 23, 0.35);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    body.admin-dark input[type="file"]::-webkit-file-upload-button {
+      background: rgba(2, 6, 23, 0.35);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
     .kpi {
       border-radius: 16px;
       border: 1px solid var(--border);
@@ -557,7 +587,7 @@
                   <button id="deleteTestBtnQB" type="button" class="btn btn-sm btn-outline-danger" style="white-space:nowrap;">Delete</button>
                 </div>
 
-                <div class="card-soft" style="padding:12px; background:#f8fafc; border-color:#eef2f7;">
+                <div class="card-soft admin-soft-panel">
                   <div style="font-weight:800;" class="mb-1">Bulk Import Questions (CSV)</div>
                   <div class="d-flex gap-2">
                     <input type="file" id="importFile" class="form-control" accept=".csv" />
@@ -907,13 +937,7 @@
 
       questions.forEach(q => {
         const item = document.createElement('div');
-        item.className = 'd-flex justify-content-between align-items-center';
-        item.style.padding = '10px 10px';
-        item.style.borderRadius = '12px';
-        item.style.border = '1px solid #eef2f7';
-        item.style.marginBottom = '8px';
-        item.style.cursor = 'pointer';
-        item.style.background = '#ffffff';
+        item.className = 'qb-question-item d-flex justify-content-between align-items-center';
 
         item.onclick = (e) => {
           if (e.target.tagName === 'BUTTON') return;
