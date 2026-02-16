@@ -1109,9 +1109,13 @@
       renderAttempts(document.getElementById('attemptFilter')?.value || '');
     }
 
+    let _studentsById = {};
+
     async function loadStudents() {
       const res = await apiFetch('/api/students');
       const students = await res.json();
+      _studentsById = {};
+      (students || []).forEach(st => { if (st && st.id != null) _studentsById[String(st.id)] = st; });
       const body = document.getElementById('studentsBody');
       body.innerHTML = '';
       students.forEach(s => {
@@ -1122,7 +1126,7 @@
           <td>
             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
               <span>${s.name}</span>
-              <button class="btn btn-sm btn-outline-secondary" onclick="editStudentName(${s.id}, '${String(s.name || '').replace(/'/g, "\\'")}')">Edit</button>
+              <button class="btn btn-sm btn-outline-secondary" onclick="editStudentName(${s.id})">Edit</button>
             </div>
           </td>
           <td>${s.username}${Number(s.must_change_password || 0) === 1 ? ' <span class="badge bg-warning text-dark">Reset Required</span>' : ''}</td>
@@ -1136,18 +1140,30 @@
       });
     }
 
-    async function editStudentName(id, currentName) {
-      const nextName = prompt('Enter the new full name for this student:', currentName || '');
-      if (!nextName) return;
+    async function editStudentName(id) {
+      const cur = _studentsById[String(id)]?.name || '';
+      const nextName = prompt('Enter the new full name for this student:', cur);
+      if (nextName == null) return;
 
+      const cleaned = String(nextName).trim();
+      if (!cleaned) {
+        alert('Name cannot be empty.');
+        return;
+      }
+
+      // Use POST for maximum compatibility (some proxies block PUT)
       const res = await apiFetch(`/api/students/${id}`, {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: nextName })
+        body: JSON.stringify({ name: cleaned })
       });
-      const data = await res.json().catch(() => ({}));
+
+      let data = {};
+      try { data = await res.json(); } catch (e) { data = {}; }
+
       if (!res.ok) {
-        alert(data.error || 'Failed to update name');
+        const msg = data?.error || `Failed to update name (HTTP ${res.status})`;
+        alert(msg);
         return;
       }
 

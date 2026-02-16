@@ -405,7 +405,7 @@ app.post('/api/students/:id/reset-password', requireAdminAuth, async (req, res) 
 });
 
 // Update Student (name)
-app.put('/api/students/:id', requireAdminAuth, async (req, res) => {
+async function updateStudentNameHandler(req, res) {
   try {
     const studentId = req.params.id;
     const { name } = req.body;
@@ -422,7 +422,11 @@ app.put('/api/students/:id', requireAdminAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+}
+
+app.put('/api/students/:id', requireAdminAuth, updateStudentNameHandler);
+// Some deployments/proxies block PUT; allow POST alias for admin UI.
+app.post('/api/students/:id', requireAdminAuth, updateStudentNameHandler);
 
 // Delete Student
 app.delete('/api/students/:id', requireAdminAuth, (req, res) => {
