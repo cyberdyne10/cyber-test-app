@@ -153,6 +153,35 @@ function requireAdminAuth(req, res, next) {
   }
 }
 
+// Allow either admin OR student auth (useful for shared endpoints)
+function requireStudentOrAdmin(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  const [scheme, token] = authHeader.split(' ');
+  if (scheme !== 'Bearer' || !token) return res.status(401).json({ error: 'Auth required' });
+
+  // Try student token first
+  try {
+    const payload = jwt.verify(token, STUDENT_JWT_SECRET);
+    if (payload.role === 'student' && payload.sid) {
+      req.student = { id: payload.sid };
+      return next();
+    }
+  } catch (e) {
+    // ignore and try admin
+  }
+
+  try {
+    const payload = jwt.verify(token, ADMIN_JWT_SECRET);
+    if (payload.role === 'admin') {
+      req.admin = payload;
+      return next();
+    }
+    return res.status(403).json({ error: 'Invalid token' });
+  } catch (e) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
 async function initializeAdminCredentials() {
   const hashRow = await dbGetAsync("SELECT value FROM admin_settings WHERE key = 'password_hash'");
   const legacyRow = await dbGetAsync("SELECT value FROM admin_settings WHERE key = 'password'");
@@ -733,7 +762,7 @@ app.delete('/api/questions/:questionId', requireAdminAuth, (req, res) => {
 });
 
 // Check eligibility (Attempts + Access Key + Schedule)
-app.post('/api/tests/:testId/check', requireStudentAuth, (req, res) => {
+app.post('/api/tests/:testId/check', requireStudentOrAdmin, (req, res) => {
   const testId = req.params.testId;
   const { student_name, student_db_id, access_key } = req.body;
 
@@ -770,7 +799,7 @@ app.post('/api/tests/:testId/check', requireStudentAuth, (req, res) => {
   });
 });
 
-app.get('/api/tests/:testId/info', requireStudentAuth, (req, res) => {
+app.get('/api/tests/:testId/info', requireStudentOrAdmin, (req, res) => {
   db.get('SELECT id, name, description, duration_minutes, instructions, max_attempts, type, access_key, start_time, end_time, questions_per_attempt, CASE WHEN access_key IS NOT NULL AND access_key != "" THEN 1 ELSE 0 END as is_locked FROM tests WHERE id = ?', [req.params.testId], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(row);
