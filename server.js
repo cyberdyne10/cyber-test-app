@@ -764,6 +764,8 @@ app.put('/api/tests/:testId', requireAdminAuth, (req, res) => {
 
 app.get('/api/tests/:testId/full', (req, res) => {
   const testId = req.params.testId;
+  const attemptId = req.query.attempt ? parseInt(req.query.attempt, 10) : null;
+
   db.get('SELECT duration_minutes, questions_per_attempt, type FROM tests WHERE id = ?', [testId], (err, testRow) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!testRow) return res.status(404).json({ error: 'Test not found' });
@@ -775,31 +777,64 @@ app.get('/api/tests/:testId/full', (req, res) => {
        JOIN options o ON q.id = o.question_id
        WHERE q.test_id = ?`,
       [testId],
-      (err2, rows) => {
-        if (err2) return res.status(500).json({ error: err2.message });
-        const questionsMap = {};
-        rows.forEach(r => {
-          if (!questionsMap[r.question_id]) {
-            questionsMap[r.question_id] = { id: r.question_id, text: r.question_text, marks: r.marks, image_url: r.image_url, question_type: r.question_type || 'single', options: [] };
+      async (err2, rows) => {
+        try {
+          if (err2) return res.status(500).json({ error: err2.message });
+          const questionsMap = {};
+          rows.forEach(r => {
+            if (!questionsMap[r.question_id]) {
+              questionsMap[r.question_id] = { id: r.question_id, text: r.question_text, marks: r.marks, image_url: r.image_url, question_type: r.question_type || 'single', options: [] };
+            }
+            questionsMap[r.question_id].options.push({ id: r.option_id, text: r.option_text });
+          });
+
+          let allQuestions = Object.values(questionsMap);
+          allQuestions = shuffle(allQuestions);
+
+          if (testRow.questions_per_attempt && testRow.questions_per_attempt > 0 && testRow.questions_per_attempt < allQuestions.length) {
+            allQuestions = allQuestions.slice(0, testRow.questions_per_attempt);
           }
-          questionsMap[r.question_id].options.push({ id: r.option_id, text: r.option_text });
-        });
 
-        let allQuestions = Object.values(questionsMap);
-        allQuestions = shuffle(allQuestions);
+          // If attempt provided, keep a stable question order across refreshes
+          if (attemptId && testRow.type !== 'practice') {
+            const attempt = await dbGetAsync('SELECT id, status FROM attempts WHERE id = ? AND test_id = ?', [attemptId, testId]);
+            if (attempt && attempt.status === 'in-progress') {
+              await ensureColumn('attempt_state', 'question_order', 'ALTER TABLE attempt_state ADD COLUMN question_order TEXT');
 
-        if (testRow.questions_per_attempt && testRow.questions_per_attempt > 0 && testRow.questions_per_attempt < allQuestions.length) {
-          allQuestions = allQuestions.slice(0, testRow.questions_per_attempt);
+              const st = await dbGetAsync('SELECT question_order FROM attempt_state WHERE attempt_id = ?', [attemptId]);
+              if (st && st.question_order) {
+                let order = [];
+                try { order = JSON.parse(st.question_order) || []; } catch (e) { order = []; }
+                const byId = new Map(allQuestions.map(q => [q.id, q]));
+                const ordered = [];
+                order.forEach(id => { if (byId.has(id)) ordered.push(byId.get(id)); });
+                // include any new questions not in order (shouldn't happen) at end
+                allQuestions.forEach(q => { if (!order.includes(q.id)) ordered.push(q); });
+                allQuestions = ordered;
+              } else {
+                // Persist initial order
+                await dbRunAsync(
+                  `INSERT INTO attempt_state (attempt_id, remaining_seconds, active_index, question_order, updated_at)
+                   VALUES (?, NULL, NULL, ?, CURRENT_TIMESTAMP)
+                   ON CONFLICT(attempt_id) DO UPDATE SET question_order=excluded.question_order, updated_at=CURRENT_TIMESTAMP`,
+                  [attemptId, JSON.stringify(allQuestions.map(q => q.id))]
+                );
+              }
+            }
+          }
+
+          allQuestions.forEach(q => { q.options = shuffle(q.options); });
+
+          res.json({
+            test_config: {
+              duration_minutes: testRow.duration_minutes || 10,
+              type: testRow.type || 'exam'
+            },
+            questions: allQuestions
+          });
+        } catch (e) {
+          res.status(500).json({ error: e.message });
         }
-        allQuestions.forEach(q => { q.options = shuffle(q.options); });
-
-        res.json({
-          test_config: { 
-            duration_minutes: testRow.duration_minutes || 10,
-            type: testRow.type || 'exam'
-          },
-          questions: allQuestions
-        });
       }
     );
   });
@@ -1135,6 +1170,7 @@ async function runMigrations() {
     attempt_id INTEGER PRIMARY KEY,
     remaining_seconds INTEGER,
     active_index INTEGER,
+    question_order TEXT,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 

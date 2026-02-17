@@ -220,7 +220,8 @@
       }
 
       // 2. Load Questions
-      const res = await fetch(`/api/tests/${testId}/full`);
+      const fullUrl = attemptId ? `/api/tests/${testId}/full?attempt=${encodeURIComponent(attemptId)}` : `/api/tests/${testId}/full`;
+      const res = await fetch(fullUrl);
       const data = await res.json();
       
       let questions = data.questions || [];
@@ -261,8 +262,22 @@
       if (isPractice) {
         document.getElementById('timer').textContent = 'PRACTICE';
         document.querySelector('.badge-chip').textContent = 'Practice Mode';
+        setSaveStatus('Practice — not saved', '#94a3b8');
       } else {
-        startTimer(config.duration_minutes || 30);
+        // If resuming, try to restore remaining seconds before starting timer
+        let startSeconds = (config.duration_minutes || 30) * 60;
+        if (attemptId) {
+          try {
+            const r = await fetch('/api/attempts/' + attemptId + '/state', { cache: 'no-store' });
+            if (r.ok) {
+              const st = await r.json();
+              if (st && st.state && Number.isFinite(st.state.remaining_seconds)) {
+                startSeconds = st.state.remaining_seconds;
+              }
+            }
+          } catch (e) {}
+        }
+        startTimerSeconds(startSeconds);
       }
 
       const form = document.getElementById('testForm');
@@ -694,10 +709,12 @@
       }
     }
 
-    function startTimer(durationMinutes) {
-      let remaining = durationMinutes * 60;
+    function startTimerSeconds(startSeconds) {
+      let remaining = Math.max(0, parseInt(startSeconds, 10) || 0);
       window._remainingSeconds = remaining;
-      window._initialRemainingSeconds = remaining;
+      if (typeof window._initialRemainingSeconds !== 'number') {
+        window._initialRemainingSeconds = remaining;
+      }
       const timerEl = document.getElementById('timer');
       let warned5min = false;
 
