@@ -593,6 +593,28 @@ app.post('/api/tests/:testId/duplicate', requireAdminAuth, (req, res) => {
   });
 });
 
+// Admin overview counts (for dashboard)
+app.get('/api/admin/overview', requireAdminAuth, async (req, res) => {
+  try {
+    const testsCountRow = await dbGetAsync('SELECT COUNT(*) as c FROM tests');
+    const studentsCountRow = await dbGetAsync('SELECT COUNT(*) as c FROM students');
+    const attemptsCountRow = await dbGetAsync('SELECT COUNT(*) as c FROM attempts WHERE status = "submitted"');
+    const liveCountRow = await dbGetAsync('SELECT COUNT(*) as c FROM attempts WHERE status = "in-progress" AND created_at >= datetime("now", "-3 hours")');
+
+    res.json({
+      success: true,
+      counts: {
+        tests: testsCountRow?.c || 0,
+        students: studentsCountRow?.c || 0,
+        submissions: attemptsCountRow?.c || 0,
+        live: liveCountRow?.c || 0
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Analytics
 app.get('/api/analytics', requireAdminAuth, (req, res) => {
   db.all(

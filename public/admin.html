@@ -1431,44 +1431,27 @@
 
     async function loadDashboard() {
       try {
-        // KPIs
-        const [testsRes, studentsRes, liveRes, attemptsRes] = await Promise.all([
-          apiFetch('/api/tests'),
-          apiFetch('/api/students'),
-          apiFetch('/api/live'),
-          apiFetch('/api/attempts')
-        ]);
+        // Load counts from one admin endpoint (more reliable)
+        const overviewRes = await apiFetch('/api/admin/overview');
+        const overviewJson = await overviewRes.json().catch(() => ({}));
+        const counts = overviewJson?.counts || {};
 
-        const testsJson = await testsRes.json().catch(() => ({}));
-        const studentsJson = await studentsRes.json().catch(() => ({}));
-        const liveJson = await liveRes.json().catch(() => ({}));
-        const attemptsJson = await attemptsRes.json().catch(() => ({}));
+        document.getElementById('kpiTests').textContent = String(counts.tests ?? 0);
+        document.getElementById('kpiStudents').textContent = String(counts.students ?? 0);
+        document.getElementById('kpiLive').textContent = String(counts.live ?? 0);
+        document.getElementById('kpiAttempts').textContent = String(counts.submissions ?? 0);
 
-        const tests = Array.isArray(testsJson) ? testsJson : [];
-        const students = Array.isArray(studentsJson) ? studentsJson : [];
-        const live = Array.isArray(liveJson) ? liveJson : [];
+        // Pull attempts for charts (optional)
+        const attemptsRes = await apiFetch('/api/attempts');
+        const attemptsJson = await attemptsRes.json().catch(() => ([]));
         const attempts = Array.isArray(attemptsJson) ? attemptsJson : [];
-
-        // Render charts safely even if attempts endpoint fails
         renderCharts(attempts);
 
-        document.getElementById('kpiTests').textContent = String(tests.length);
-        document.getElementById('kpiStudents').textContent = String(students.length);
-        document.getElementById('kpiLive').textContent = String(live.length);
-        document.getElementById('kpiAttempts').textContent = String(attempts.length);
-
-        // Show a hint if something failed
-        const problems = [];
-        if (!testsRes.ok) problems.push('tests');
-        if (!studentsRes.ok) problems.push('students');
-        if (!liveRes.ok) problems.push('live');
-        if (!attemptsRes.ok) problems.push('attempts');
-        const sub = document.getElementById('pageSubtitle');
-        if (sub && problems.length) {
-          sub.textContent = 'Some stats failed to load: ' + problems.join(', ') + '. Try refresh.';
-        }
-
         // Mini live table
+        const liveRes = await apiFetch('/api/live');
+        const liveJson = await liveRes.json().catch(() => ([]));
+        const live = Array.isArray(liveJson) ? liveJson : [];
+
         const dashLiveBody = document.getElementById('dashLiveBody');
         dashLiveBody.innerHTML = '';
         const top = live.slice(0, 6);
@@ -1480,6 +1463,11 @@
             tr.innerHTML = `<td>${l.student_name}</td><td>${l.test_name}</td><td>${l.violations}</td>`;
             dashLiveBody.appendChild(tr);
           });
+        }
+
+        const sub = document.getElementById('pageSubtitle');
+        if (sub && !overviewRes.ok) {
+          sub.textContent = overviewJson?.error ? ('Dashboard failed: ' + overviewJson.error) : 'Dashboard failed to load. Try refresh.';
         }
 
         await loadAnalytics(false);
