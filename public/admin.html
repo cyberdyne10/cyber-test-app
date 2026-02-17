@@ -873,28 +873,52 @@
     tabs.forEach((t, i) => document.getElementById(t).addEventListener('click', (e) => { e.preventDefault(); switchTab(i); }));
 
     // Login Logic (SERVER SIDE)
-    loginBtn.addEventListener('click', async () => {
+    async function adminLogin() {
       const password = document.getElementById('adminPassword').value;
+      if (!password) {
+        loginError.textContent = 'Password is required.';
+        loginError.style.display = 'block';
+        return;
+      }
+
+      loginBtn.disabled = true;
+      const oldText = loginBtn.textContent;
+      loginBtn.textContent = 'Signing in…';
+
       try {
         const res = await fetch('/api/admin/login', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ password })
         });
-        const data = await res.json();
 
-        if (data.success && data.token) {
+        let data = {};
+        try { data = await res.json(); } catch (e) { data = {}; }
+
+        if (res.ok && data.success && data.token) {
           setAdminToken(data.token);
           loginError.style.display = 'none';
           loginSection.style.display = 'none';
           adminApp.style.display = 'flex';
           initAdmin();
-        } else {
-          loginError.style.display = 'block';
+          return;
         }
+
+        const msg = data.error || 'Incorrect phrase. Try again.';
+        loginError.textContent = msg;
+        loginError.style.display = 'block';
       } catch (e) {
-        alert('Server error checking password');
+        loginError.textContent = 'Network/server error. Please refresh and try again.';
+        loginError.style.display = 'block';
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = oldText;
       }
+    }
+
+    loginBtn.addEventListener('click', adminLogin);
+    document.getElementById('adminPassword')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') adminLogin();
     });
 
     // Shared state
