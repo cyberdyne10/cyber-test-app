@@ -1305,7 +1305,8 @@
     }
 
     function computeChartData(attempts) {
-      const submitted = (attempts || []).filter(a => a && a.status === 'submitted');
+      const list = Array.isArray(attempts) ? attempts : [];
+      const submitted = list.filter(a => a && a.status === 'submitted');
 
       return { labels, counts, distLabels, dist };
     }
@@ -1429,41 +1430,67 @@
     }
 
     async function loadDashboard() {
-      // KPIs
-      const [testsRes, studentsRes, liveRes, attemptsRes] = await Promise.all([
-        apiFetch('/api/tests'),
-        apiFetch('/api/students'),
-        apiFetch('/api/live'),
-        apiFetch('/api/attempts')
-      ]);
+      try {
+        // KPIs
+        const [testsRes, studentsRes, liveRes, attemptsRes] = await Promise.all([
+          apiFetch('/api/tests'),
+          apiFetch('/api/students'),
+          apiFetch('/api/live'),
+          apiFetch('/api/attempts')
+        ]);
 
-      const tests = await testsRes.json();
-      const students = await studentsRes.json();
-      const live = await liveRes.json();
-      const attempts = await attemptsRes.json();
+        const testsJson = await testsRes.json().catch(() => ({}));
+        const studentsJson = await studentsRes.json().catch(() => ({}));
+        const liveJson = await liveRes.json().catch(() => ({}));
+        const attemptsJson = await attemptsRes.json().catch(() => ({}));
 
-      renderCharts(attempts);
+        const tests = Array.isArray(testsJson) ? testsJson : [];
+        const students = Array.isArray(studentsJson) ? studentsJson : [];
+        const live = Array.isArray(liveJson) ? liveJson : [];
+        const attempts = Array.isArray(attemptsJson) ? attemptsJson : [];
 
-      document.getElementById('kpiTests').textContent = Array.isArray(tests) ? tests.length : '—';
-      document.getElementById('kpiStudents').textContent = Array.isArray(students) ? students.length : '—';
-      document.getElementById('kpiLive').textContent = Array.isArray(live) ? live.length : '—';
-      document.getElementById('kpiAttempts').textContent = Array.isArray(attempts) ? attempts.length : '—';
+        // Render charts safely even if attempts endpoint fails
+        renderCharts(attempts);
 
-      // Mini live table
-      const dashLiveBody = document.getElementById('dashLiveBody');
-      dashLiveBody.innerHTML = '';
-      const top = (Array.isArray(live) ? live.slice(0, 6) : []);
-      if (!top.length) {
-        dashLiveBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No active students</td></tr>';
-      } else {
-        top.forEach(l => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${l.student_name}</td><td>${l.test_name}</td><td>${l.violations}</td>`;
-          dashLiveBody.appendChild(tr);
-        });
+        document.getElementById('kpiTests').textContent = String(tests.length);
+        document.getElementById('kpiStudents').textContent = String(students.length);
+        document.getElementById('kpiLive').textContent = String(live.length);
+        document.getElementById('kpiAttempts').textContent = String(attempts.length);
+
+        // Show a hint if something failed
+        const problems = [];
+        if (!testsRes.ok) problems.push('tests');
+        if (!studentsRes.ok) problems.push('students');
+        if (!liveRes.ok) problems.push('live');
+        if (!attemptsRes.ok) problems.push('attempts');
+        const sub = document.getElementById('pageSubtitle');
+        if (sub && problems.length) {
+          sub.textContent = 'Some stats failed to load: ' + problems.join(', ') + '. Try refresh.';
+        }
+
+        // Mini live table
+        const dashLiveBody = document.getElementById('dashLiveBody');
+        dashLiveBody.innerHTML = '';
+        const top = live.slice(0, 6);
+        if (!top.length) {
+          dashLiveBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No active students</td></tr>';
+        } else {
+          top.forEach(l => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${l.student_name}</td><td>${l.test_name}</td><td>${l.violations}</td>`;
+            dashLiveBody.appendChild(tr);
+          });
+        }
+
+        await loadAnalytics(false);
+
+      } catch (e) {
+        console.error('Dashboard load failed', e);
+        const sub = document.getElementById('pageSubtitle');
+        if (sub) sub.textContent = 'Dashboard failed to load. Refresh the page.';
       }
 
-      await loadAnalytics(false);
+      // (Dashboard cards already rendered above.)
     }
 
     function initAdmin() {
