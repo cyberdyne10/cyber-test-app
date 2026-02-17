@@ -677,8 +677,35 @@
           </div>
 
           <div class="card-soft mb-3">
-            <div class="text-muted" style="font-size:0.9rem;">Click a card to jump to its test in Manage Tests.</div>
-            <div id="analyticsGrid2" class="row g-3 mt-1"></div>
+            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+              <div class="text-muted" style="font-size:0.9rem;">Click a card to jump to its test in Manage Tests.</div>
+              <div class="d-flex gap-2 align-items-center">
+                <label class="text-muted" style="font-size:0.85rem;">Filter test:</label>
+                <select id="analyticsTestFilter" class="form-select form-select-sm" style="min-width:220px;"></select>
+              </div>
+            </div>
+            <div id="analyticsGrid2" class="row g-3 mt-2"></div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-lg-7">
+              <div class="card-soft">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div style="font-weight:900;">Attempts over time</div>
+                  <span class="chip">Last 14 days</span>
+                </div>
+                <canvas id="chartAttemptsAnalytics" height="110"></canvas>
+              </div>
+            </div>
+            <div class="col-lg-5">
+              <div class="card-soft">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div style="font-weight:900;">Score distribution</div>
+                  <span class="chip">Submitted</span>
+                </div>
+                <canvas id="chartScoresAnalytics" height="110"></canvas>
+              </div>
+            </div>
           </div>
 
           <div class="card-soft">
@@ -1119,9 +1146,12 @@
     }
 
     async function loadAttempts() {
-      const res = await apiFetch('/api/attempts');
+      const testId = document.getElementById('analyticsTestFilter')?.value || '';
+      const url = testId ? (`/api/attempts?test_id=${encodeURIComponent(testId)}`) : '/api/attempts';
+      const res = await apiFetch(url);
       _attemptsCache = await res.json();
       renderAttempts(document.getElementById('attemptFilter')?.value || '');
+      renderAnalyticsCharts(_attemptsCache);
     }
 
     let _studentsById = {};
@@ -1236,17 +1266,71 @@
 
     let _chartAttempts = null;
     let _chartScores = null;
+    let _chartAttemptsAnalytics = null;
+    let _chartScoresAnalytics = null;
 
     function destroyCharts() {
       try { if (_chartAttempts) _chartAttempts.destroy(); } catch(e) {}
       try { if (_chartScores) _chartScores.destroy(); } catch(e) {}
+      try { if (_chartAttemptsAnalytics) _chartAttemptsAnalytics.destroy(); } catch(e) {}
+      try { if (_chartScoresAnalytics) _chartScoresAnalytics.destroy(); } catch(e) {}
       _chartAttempts = null;
       _chartScores = null;
+      _chartAttemptsAnalytics = null;
+      _chartScoresAnalytics = null;
+    }
+
+    function computeChartData(attempts) {
+      const submitted = (attempts || []).filter(a => a && a.status === 'submitted');
+
+      const days = 14;
+      const labels = [];
+      const counts = [];
+      const today = new Date();
+      const start = new Date(today);
+      start.setDate(start.getDate() - (days - 1));
+
+      const key = (d) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth()+1).padStart(2,'0');
+        const dd = String(d.getDate()).padStart(2,'0');
+        return y + '-' + m + '-' + dd;
+      };
+
+      const bucket = new Map();
+      for (let i=0;i<days;i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate()+i);
+        const k = key(d);
+        bucket.set(k, 0);
+        labels.push(d.toLocaleDateString(undefined,{month:'short',day:'2-digit'}));
+      }
+
+      submitted.forEach(a => {
+        const d = new Date(a.created_at);
+        const k = key(d);
+        if (bucket.has(k)) bucket.set(k, bucket.get(k) + 1);
+      });
+
+      counts.push(...Array.from(bucket.values()));
+
+      const distLabels = ['0-9','10-19','20-29','30-39','40-49','50-59','60-69','70-79','80-89','90-100'];
+      const dist = new Array(distLabels.length).fill(0);
+      submitted.forEach(a => {
+        const total = Number(a.total || 0);
+        const score = Number(a.score || 0);
+        if (!total) return;
+        const pct = Math.round((score/total) * 100);
+        const idx = pct >= 90 ? 9 : Math.floor(pct/10);
+        dist[Math.max(0, Math.min(9, idx))]++;
+      });
+
+      return { labels, counts, distLabels, dist };
     }
 
     function renderCharts(attempts) {
       if (!window.Chart) return;
-      const submitted = (attempts || []).filter(a => a && a.status === 'submitted');
+      const { labels, counts, distLabels, dist } = computeChartData(attempts);
 
       const days = 14;
       const labels = [];
@@ -1330,6 +1414,64 @@
               data: dist,
               backgroundColor: 'rgba(2,132,199,0.25)',
               borderColor: '#0284c7',
+              borderWidth: 1,
+              borderRadius: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { display: false } },
+              y: { grid: { color: 'rgba(15,23,42,0.06)' }, ticks: { precision: 0 } }
+            }
+          }
+        });
+      }
+    }
+
+    function renderAnalyticsCharts(attempts) {
+      if (!window.Chart) return;
+      const { labels, counts, distLabels, dist } = computeChartData(attempts);
+
+      const c1 = document.getElementById('chartAttemptsAnalytics');
+      if (c1) {
+        _chartAttemptsAnalytics = new Chart(c1, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Submissions',
+              data: counts,
+              borderColor: '#0ea5e9',
+              backgroundColor: 'rgba(14,165,233,0.14)',
+              tension: 0.35,
+              fill: true,
+              pointRadius: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { display: false } },
+              y: { grid: { color: 'rgba(15,23,42,0.06)' }, ticks: { precision: 0 } }
+            }
+          }
+        });
+      }
+
+      const c2 = document.getElementById('chartScoresAnalytics');
+      if (c2) {
+        _chartScoresAnalytics = new Chart(c2, {
+          type: 'bar',
+          data: {
+            labels: distLabels,
+            datasets: [{
+              label: 'Students',
+              data: dist,
+              backgroundColor: 'rgba(34,197,94,0.22)',
+              borderColor: '#22c55e',
               borderWidth: 1,
               borderRadius: 8
             }]
@@ -1606,7 +1748,30 @@
       });
 
       // First load
-      refreshAllTestSelectors().then(() => {
+      refreshAllTestSelectors().then(async () => {
+        // populate analytics filter
+        const sel = document.getElementById('analyticsTestFilter');
+        if (sel) {
+          const testsRes = await apiFetch('/api/tests');
+          const tests = await testsRes.json().catch(() => []);
+          sel.innerHTML = '';
+          const optAll = document.createElement('option');
+          optAll.value = '';
+          optAll.textContent = 'All tests';
+          sel.appendChild(optAll);
+          (tests || []).forEach(t => {
+            const o = document.createElement('option');
+            o.value = String(t.id);
+            o.textContent = t.name;
+            sel.appendChild(o);
+          });
+          sel.addEventListener('change', () => {
+            if (!document.getElementById('view-analytics').classList.contains('hidden')) {
+              loadAttempts();
+            }
+          });
+        }
+
         switchTab(0);
       });
 

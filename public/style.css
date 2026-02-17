@@ -322,6 +322,18 @@ textarea.form-control:focus {
   font-size: 0.9rem;
 }
 
+/* Mobile tap targets */
+@media (max-width: 576px) {
+  .option-pill {
+    padding: 0.7rem 0.85rem;
+    font-size: 1rem;
+    min-height: 48px;
+  }
+  .option-pill input {
+    transform: scale(1.2);
+  }
+}
+
 .option-pill:hover {
   border-color: rgba(56, 189, 248, 0.5);
   background: radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.15), transparent 55%),

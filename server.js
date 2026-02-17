@@ -1309,7 +1309,16 @@ app.get('/api/practice-sets/:setId', requireStudentAuth, studentExamLimiter, asy
 });
 
 app.get('/api/attempts', requireAdminAuth, (req, res) => {
-  db.all('SELECT a.*, t.name AS test_name FROM attempts a JOIN tests t ON a.test_id = t.id WHERE a.status = "submitted" ORDER BY a.created_at DESC', [], (err, rows) => {
+  const testId = req.query.test_id ? parseInt(req.query.test_id, 10) : null;
+  let sql = 'SELECT a.*, t.name AS test_name, t.id as test_id FROM attempts a JOIN tests t ON a.test_id = t.id WHERE a.status = "submitted"';
+  const params = [];
+  if (testId) {
+    sql += ' AND a.test_id = ?';
+    params.push(testId);
+  }
+  sql += ' ORDER BY a.created_at DESC';
+
+  db.all(sql, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
