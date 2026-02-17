@@ -162,6 +162,22 @@
       if (Number.isFinite(n) && n > 0) attemptId = n;
     }
 
+    function getStudentToken() {
+      return localStorage.getItem('cln_student_token');
+    }
+
+    async function studentFetch(url, options = {}) {
+      const headers = new Headers(options.headers || {});
+      const token = getStudentToken();
+      if (token) headers.set('Authorization', `Bearer ${token}`);
+      const res = await fetch(url, { ...options, headers });
+      if (res.status === 401 || res.status === 403) {
+        // token invalid/expired: force logout
+        try { localStorage.removeItem('cln_student_token'); } catch (e) {}
+      }
+      return res;
+    }
+
     function setSaveStatus(text, color) {
       const el = document.getElementById('saveStatus');
       if (!el) return;
@@ -195,17 +211,17 @@
     // Anti-Cheating: Detect Blur
     window.addEventListener('blur', () => {
       if (attemptId && !isPractice) {
-        fetch(`/api/attempts/${attemptId}/violation`, { method: 'POST' });
+        studentFetch(`/api/attempts/${attemptId}/violation`, { method: 'POST' });
         console.log('Violation recorded: Window blur');
       }
     });
 
     async function loadQuestions() {
       // 1. Notify Start (Live Monitor)
-      const startRes = await fetch(`/api/tests/${testId}/start`, {
+      const startRes = await studentFetch(`/api/tests/${testId}/start`, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ student_name: studentName, student_id: studentId, student_db_id: dbId })
+        body: JSON.stringify({})
       });
       const startData = await startRes.json();
       attemptId = startData.attempt_id;
@@ -221,7 +237,7 @@
 
       // 2. Load Questions
       const fullUrl = attemptId ? `/api/tests/${testId}/full?attempt=${encodeURIComponent(attemptId)}` : `/api/tests/${testId}/full`;
-      const res = await fetch(fullUrl);
+      const res = await studentFetch(fullUrl);
       const data = await res.json();
       
       let questions = data.questions || [];
@@ -268,7 +284,7 @@
         let startSeconds = (config.duration_minutes || 30) * 60;
         if (attemptId) {
           try {
-            const r = await fetch('/api/attempts/' + attemptId + '/state', { cache: 'no-store' });
+            const r = await studentFetch('/api/attempts/' + attemptId + '/state', { cache: 'no-store' });
             if (r.ok) {
               const st = await r.json();
               if (st && st.state && Number.isFinite(st.state.remaining_seconds)) {
@@ -446,7 +462,7 @@
       async function restoreProgress() {
         if (!attemptId) return;
         try {
-          const r = await fetch('/api/attempts/' + attemptId + '/state', { cache: 'no-store' });
+          const r = await studentFetch('/api/attempts/' + attemptId + '/state', { cache: 'no-store' });
           if (!r.ok) return;
           const st = await r.json();
           if (!st || !Array.isArray(st.answers)) return;
@@ -493,7 +509,7 @@
         };
 
         try {
-          const r = await fetch('/api/attempts/' + attemptId + '/save', {
+          const r = await studentFetch('/api/attempts/' + attemptId + '/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -528,7 +544,19 @@
 
       // Track focus to prompt save
       window.addEventListener('beforeunload', () => {
-        try { if (attemptId && !isPractice) navigator.sendBeacon('/api/attempts/' + attemptId + '/save', new Blob([JSON.stringify({ remaining_seconds: window._remainingSeconds, active_index: _activeQ, answers: serializeAnswers(), flagged: Array.from(flagged.values()) })], { type: 'application/json' })); } catch(e) {}
+        try {
+          const token = getStudentToken();
+          if (attemptId && !isPractice && token) {
+            const blob = new Blob([JSON.stringify({ remaining_seconds: window._remainingSeconds, active_index: _activeQ, answers: serializeAnswers(), flagged: Array.from(flagged.values()) })], { type: 'application/json' });
+            // sendBeacon cannot set headers; do a best-effort fetch keepalive instead.
+            fetch('/api/attempts/' + attemptId + '/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+              body: blob,
+              keepalive: true
+            });
+          }
+        } catch(e) {}
       });
 
 
@@ -556,7 +584,7 @@
         answers
       };
 
-      const res = await fetch(`/api/tests/${testId}/submit`, {
+      const res = await studentFetch(`/api/tests/${testId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

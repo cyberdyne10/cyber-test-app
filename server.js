@@ -19,6 +19,10 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 const BCRYPT_ROUNDS = parseInt(process.env.ADMIN_BCRYPT_ROUNDS || '12', 10);
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'dev-only-change-me';
 const ADMIN_TOKEN_EXPIRY = process.env.ADMIN_TOKEN_EXPIRY || '2h';
+
+const STUDENT_JWT_SECRET = process.env.STUDENT_JWT_SECRET || 'dev-only-change-me-student';
+const STUDENT_TOKEN_EXPIRY = process.env.STUDENT_TOKEN_EXPIRY || '7d';
+
 const DEV_DEFAULT_ADMIN_PASSWORD = 'ChangeMe_LocalAdmin_123!';
 
 if (IS_PROD && !process.env.ADMIN_JWT_SECRET) {
@@ -113,6 +117,25 @@ function isStrongAdminPassword(password) {
 
 function signAdminToken() {
   return jwt.sign({ role: 'admin' }, ADMIN_JWT_SECRET, { expiresIn: ADMIN_TOKEN_EXPIRY });
+}
+
+function signStudentToken(student) {
+  return jwt.sign({ role: 'student', sid: student.id }, STUDENT_JWT_SECRET, { expiresIn: STUDENT_TOKEN_EXPIRY });
+}
+
+function requireStudentAuth(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  const [scheme, token] = authHeader.split(' ');
+  if (scheme !== 'Bearer' || !token) return res.status(401).json({ error: 'Student auth required' });
+
+  try {
+    const payload = jwt.verify(token, STUDENT_JWT_SECRET);
+    if (payload.role !== 'student' || !payload.sid) return res.status(403).json({ error: 'Invalid student token' });
+    req.student = { id: payload.sid };
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired student token' });
+  }
 }
 
 function requireAdminAuth(req, res, next) {
@@ -266,6 +289,11 @@ app.post('/api/admin/update-password', requireAdminAuth, async (req, res) => {
 });
 
 // STUDENT AUTH ROUTES
+if (IS_PROD && !process.env.STUDENT_JWT_SECRET) {
+  console.error('STUDENT_JWT_SECRET is required in production.');
+  process.exit(1);
+}
+
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, username, password } = req.body;
@@ -284,7 +312,9 @@ app.post('/api/auth/register', async (req, res) => {
 
       db.run('UPDATE students SET reg_number = ? WHERE id = ?', [regNum, studentId], (err2) => {
         if (err2) console.error('Error setting reg number', err2);
-        res.json({ success: true, id: studentId, name, username, reg_number: regNum });
+        const student = { id: studentId, name, username, reg_number: regNum };
+        const token = signStudentToken(student);
+        res.json({ success: true, token, expiresIn: STUDENT_TOKEN_EXPIRY, student });
       });
     });
   } catch (err) {
@@ -321,10 +351,15 @@ app.post('/api/auth/login', (req, res) => {
       row.reg_number = newReg;
     }
 
+    const student = { id: row.id, name: row.name, username: row.username, reg_number: row.reg_number };
+    const token = signStudentToken(student);
+
     res.json({
       success: true,
+      token,
+      expiresIn: STUDENT_TOKEN_EXPIRY,
       force_password_change: Number(row.must_change_password || 0) === 1,
-      student: { id: row.id, name: row.name, username: row.username, reg_number: row.reg_number }
+      student
     });
   });
 });
@@ -762,9 +797,12 @@ app.put('/api/tests/:testId', requireAdminAuth, (req, res) => {
   );
 });
 
-app.get('/api/tests/:testId/full', (req, res) => {
+app.get('/api/tests/:testId/full', requireStudentAuth, (req, res) => {
   const testId = req.params.testId;
   const attemptId = req.query.attempt ? parseInt(req.query.attempt, 10) : null;
+  if (!attemptId) {
+    return res.status(400).json({ error: 'Attempt is required' });
+  }
 
   db.get('SELECT duration_minutes, questions_per_attempt, type FROM tests WHERE id = ?', [testId], (err, testRow) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -797,7 +835,9 @@ app.get('/api/tests/:testId/full', (req, res) => {
 
           // If attempt provided, keep a stable question order across refreshes
           if (attemptId && testRow.type !== 'practice') {
-            const attempt = await dbGetAsync('SELECT id, status FROM attempts WHERE id = ? AND test_id = ?', [attemptId, testId]);
+            const attempt = await dbGetAsync('SELECT id, status, student_db_id FROM attempts WHERE id = ? AND test_id = ?', [attemptId, testId]);
+            if (!attempt) return res.status(404).json({ error: 'Attempt not found' });
+            if (attempt.student_db_id !== req.student.id) return res.status(403).json({ error: 'Forbidden' });
             if (attempt && attempt.status === 'in-progress') {
               await ensureColumn('attempt_state', 'question_order', 'ALTER TABLE attempt_state ADD COLUMN question_order TEXT');
 
@@ -840,11 +880,36 @@ app.get('/api/tests/:testId/full', (req, res) => {
   });
 });
 
-app.post('/api/tests/:testId/submit', (req, res) => {
+app.post('/api/tests/:testId/submit', requireStudentAuth, async (req, res) => {
   const testId = req.params.testId;
-  const { student_name, student_id, student_db_id, answers, attempt_id } = req.body; 
+  const { answers, attempt_id } = req.body;
 
   if (!answers || answers.length === 0) return res.status(400).json({ error: 'No answers' });
+
+  // Resolve student identity from token
+  let studentRow;
+  try {
+    studentRow = await dbGetAsync('SELECT id, name, reg_number FROM students WHERE id = ?', [req.student.id]);
+  } catch (e) {
+    return res.status(500).json({ error: 'Student lookup failed' });
+  }
+  if (!studentRow) return res.status(401).json({ error: 'Student not found' });
+
+  const student_name = studentRow.name;
+  const student_id = `REG-${studentRow.id}`;
+  const student_db_id = studentRow.id;
+
+  // If attempt_id provided, enforce ownership
+  if (attempt_id) {
+    try {
+      const attempt = await dbGetAsync('SELECT id, student_db_id, status FROM attempts WHERE id = ? AND test_id = ?', [attempt_id, testId]);
+      if (!attempt) return res.status(404).json({ error: 'Attempt not found' });
+      if (attempt.student_db_id !== student_db_id) return res.status(403).json({ error: 'Forbidden' });
+      if (attempt.status !== 'in-progress') return res.status(409).json({ error: 'Attempt not in progress' });
+    } catch (e) {
+      return res.status(500).json({ error: 'Attempt verification failed' });
+    }
+  }
 
   const oIds = answers.map(a => a.option_id);
   const placeholders = oIds.map(() => '?').join(',');
@@ -971,62 +1036,82 @@ app.post('/api/tests/:testId/submit', (req, res) => {
 });
 
 // Start Attempt (for Live Monitoring) + Resume existing in-progress
-app.post('/api/tests/:testId/start', (req, res) => {
+app.post('/api/tests/:testId/start', requireStudentAuth, async (req, res) => {
   const testId = req.params.testId;
-  const { student_name, student_id, student_db_id } = req.body;
 
-  // Check test type first; do not record attempts for practice mode
-  db.get('SELECT type FROM tests WHERE id = ?', [testId], (err, test) => {
-    if (err || !test) return res.status(404).json({ error: 'Test not found' });
+  try {
+    const studentRow = await dbGetAsync('SELECT id, name, reg_number FROM students WHERE id = ?', [req.student.id]);
+    if (!studentRow) return res.status(401).json({ error: 'Student not found' });
 
-    if (test.type === 'practice') {
-      // No DB write; just return null attempt id for practice
-      return res.json({ attempt_id: null });
-    }
+    const student_name = studentRow.name;
+    const student_id = `REG-${studentRow.id}`;
+    const student_db_id = studentRow.id;
 
-    // If there's an existing in-progress attempt for this student+test, resume it.
-    let sql = 'SELECT id FROM attempts WHERE test_id = ? AND status = "in-progress" AND ';
-    const params = [testId];
-    if (student_db_id) { sql += 'student_db_id = ?'; params.push(student_db_id); }
-    else { sql += 'student_db_id IS NULL AND student_name = ?'; params.push(student_name); }
-    sql += ' ORDER BY id DESC LIMIT 1';
+    // Check test type first; do not record attempts for practice mode
+    db.get('SELECT type FROM tests WHERE id = ?', [testId], (err, test) => {
+      if (err || !test) return res.status(404).json({ error: 'Test not found' });
 
-    db.get(sql, params, (errExisting, row) => {
-      if (!errExisting && row && row.id) {
-        return res.json({ attempt_id: row.id, resumed: true });
+      if (test.type === 'practice') {
+        // No DB write; just return null attempt id for practice
+        return res.json({ attempt_id: null });
       }
 
-      // Otherwise create new attempt
-      db.run(
-        'INSERT INTO attempts (student_name, student_id, student_db_id, test_id, score, total, status) VALUES (?, ?, ?, ?, 0, 0, ?)',
-        [student_name, student_id || '', student_db_id || null, testId, 'in-progress'],
-        function(err3) {
-          if (err3) return res.status(500).json({ error: err3.message });
-          res.json({ attempt_id: this.lastID, resumed: false });
+      // If there's an existing in-progress attempt for this student+test, resume it.
+      let sql = 'SELECT id FROM attempts WHERE test_id = ? AND status = "in-progress" AND student_db_id = ? ORDER BY id DESC LIMIT 1';
+      const params = [testId, student_db_id];
+
+      db.get(sql, params, (errExisting, row) => {
+        if (!errExisting && row && row.id) {
+          return res.json({ attempt_id: row.id, resumed: true });
         }
-      );
+
+        // Otherwise create new attempt
+        db.run(
+          'INSERT INTO attempts (student_name, student_id, student_db_id, test_id, score, total, status) VALUES (?, ?, ?, ?, 0, 0, ?)',
+          [student_name, student_id, student_db_id, testId, 'in-progress'],
+          function(err3) {
+            if (err3) return res.status(500).json({ error: err3.message });
+            res.json({ attempt_id: this.lastID, resumed: false });
+          }
+        );
+      });
     });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Report Violation
-app.post('/api/attempts/:attemptId/violation', (req, res) => {
-  db.run('UPDATE attempts SET violations = violations + 1 WHERE id = ?', [req.params.attemptId], (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ success: true });
-  });
+// Report Violation (student-owned attempt only)
+app.post('/api/attempts/:attemptId/violation', requireStudentAuth, async (req, res) => {
+  try {
+    const attemptId = parseInt(req.params.attemptId, 10);
+    if (!attemptId) return res.status(400).json({ error: 'Invalid attempt id' });
+
+    const attempt = await dbGetAsync('SELECT id, student_db_id, status FROM attempts WHERE id = ?', [attemptId]);
+    if (!attempt) return res.status(404).json({ error: 'Attempt not found' });
+    if (attempt.student_db_id !== req.student.id) return res.status(403).json({ error: 'Forbidden' });
+    if (attempt.status !== 'in-progress') return res.status(409).json({ error: 'Attempt not in progress' });
+
+    db.run('UPDATE attempts SET violations = violations + 1 WHERE id = ?', [attemptId], (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Student autosave / resume (no admin auth). Uses attempt id as capability.
-app.post('/api/attempts/:attemptId/save', async (req, res) => {
+// Student autosave / resume (student-owned attempt only)
+app.post('/api/attempts/:attemptId/save', requireStudentAuth, async (req, res) => {
   try {
     const attemptId = parseInt(req.params.attemptId, 10);
     if (!attemptId) return res.status(400).json({ error: 'Invalid attempt id' });
 
     const { remaining_seconds, active_index, answers, flagged } = req.body || {};
 
-    const attempt = await dbGetAsync('SELECT id, status FROM attempts WHERE id = ?', [attemptId]);
+    const attempt = await dbGetAsync('SELECT id, status, student_db_id FROM attempts WHERE id = ?', [attemptId]);
     if (!attempt) return res.status(404).json({ error: 'Attempt not found' });
+    if (attempt.student_db_id !== req.student.id) return res.status(403).json({ error: 'Forbidden' });
     if (attempt.status !== 'in-progress') {
       return res.status(409).json({ error: 'Attempt is not in progress' });
     }
@@ -1081,13 +1166,14 @@ app.post('/api/attempts/:attemptId/save', async (req, res) => {
   }
 });
 
-app.get('/api/attempts/:attemptId/state', async (req, res) => {
+app.get('/api/attempts/:attemptId/state', requireStudentAuth, async (req, res) => {
   try {
     const attemptId = parseInt(req.params.attemptId, 10);
     if (!attemptId) return res.status(400).json({ error: 'Invalid attempt id' });
 
-    const attempt = await dbGetAsync('SELECT id, status FROM attempts WHERE id = ?', [attemptId]);
+    const attempt = await dbGetAsync('SELECT id, status, student_db_id FROM attempts WHERE id = ?', [attemptId]);
     if (!attempt) return res.status(404).json({ error: 'Attempt not found' });
+    if (attempt.student_db_id !== req.student.id) return res.status(403).json({ error: 'Forbidden' });
 
     const state = await dbGetAsync('SELECT remaining_seconds, active_index, updated_at FROM attempt_state WHERE attempt_id = ?', [attemptId]);
     const answers = await new Promise((resolve, reject) => {

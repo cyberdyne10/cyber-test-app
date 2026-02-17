@@ -74,6 +74,16 @@
         </div>
 
         <div id="testSelectionArea" class="hidden">
+          <div id="resumeArea" class="hidden mb-3" style="background:rgba(15,23,42,0.55); border:1px solid rgba(56,189,248,0.2); border-radius:12px; padding:0.75rem 1rem;">
+            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+              <div>
+                <div class="fw-semibold" style="color:#e2e8f0;">Resume last session</div>
+                <div id="resumeMeta" class="text-muted" style="font-size:0.85rem;"></div>
+              </div>
+              <button id="resumeBtn" class="btn btn-sm btn-outline-warning">Resume</button>
+            </div>
+          </div>
+
           <div class="mb-3">
             <label class="form-label">Select Test</label>
             <select id="testSelect" class="form-select"></select>
@@ -155,17 +165,61 @@
   <script>
     let currentUser = null; 
 
+    function _getLastSession() {
+      try { return JSON.parse(localStorage.getItem('cln_last_session') || 'null'); } catch (e) { return null; }
+    }
+    function _setLastSession(obj) {
+      localStorage.setItem('cln_last_session', JSON.stringify(obj));
+    }
+    function _clearLastSession() {
+      localStorage.removeItem('cln_last_session');
+    }
+
+    function renderResumeIfAny() {
+      const area = document.getElementById('resumeArea');
+      const btn = document.getElementById('resumeBtn');
+      const meta = document.getElementById('resumeMeta');
+      if (!area || !btn || !meta) return;
+
+      const last = _getLastSession();
+      if (!last || !last.url) {
+        area.classList.add('hidden');
+        return;
+      }
+
+      const startedAt = last.startedAt ? new Date(last.startedAt) : null;
+      meta.textContent = startedAt ? ('Started: ' + startedAt.toLocaleString()) : 'Session found.';
+      area.classList.remove('hidden');
+
+      btn.onclick = () => {
+        // Note: backend does not yet resume an in-progress attempt; this re-opens the last test URL.
+        window.location.href = last.url;
+      };
+    } 
+
+    function getStudentToken() {
+      return localStorage.getItem('cln_student_token');
+    }
+
     function checkAuth() {
       const stored = localStorage.getItem('cln_student_user');
-      if (stored) {
+      const token = getStudentToken();
+      if (stored && token) {
         currentUser = JSON.parse(stored);
         // Fix for stale data: if reg_number is missing, force re-login
         if (!currentUser.reg_number) {
-          logout(); 
+          logout();
           return;
         }
         showLoggedInState();
       }
+    }
+
+    async function studentFetch(url, options = {}) {
+      const headers = new Headers(options.headers || {});
+      const token = getStudentToken();
+      if (token) headers.set('Authorization', `Bearer ${token}`);
+      return fetch(url, { ...options, headers });
     }
 
     function showLoggedInState() {
@@ -177,10 +231,12 @@
       document.getElementById('startBtn').classList.remove('hidden');
       const fullBtn = document.getElementById('startFullSessionBtn');
       if (fullBtn) fullBtn.classList.remove('hidden');
+      renderResumeIfAny();
     }
 
     function logout() {
       localStorage.removeItem('cln_student_user');
+      localStorage.removeItem('cln_student_token');
       location.reload();
     }
 
@@ -248,6 +304,7 @@
         }
 
         currentUser = data.student;
+        if (data.token) localStorage.setItem('cln_student_token', data.token);
         localStorage.setItem('cln_student_user', JSON.stringify(currentUser));
         showLoggedInState();
         authModal.classList.add('hidden');
@@ -269,7 +326,8 @@
       });
       const data = await res.json();
       if (data.success) {
-        currentUser = { id: data.id, name: data.name || name, username: data.username || username, reg_number: data.reg_number };
+        currentUser = data.student || { id: data.id, name: data.name || name, username: data.username || username, reg_number: data.reg_number };
+        if (data.token) localStorage.setItem('cln_student_token', data.token);
         localStorage.setItem('cln_student_user', JSON.stringify(currentUser));
         showLoggedInState();
         authModal.classList.add('hidden');
@@ -367,7 +425,7 @@
       const testId = sel.value;
       
       // Fetch fresh test info (instructions, lock status)
-      const resInfo = await fetch(`/api/tests/${testId}/info`);
+      const resInfo = await studentFetch(`/api/tests/${testId}/info`);
       const info = await resInfo.json();
 
       document.getElementById('instrText').textContent = info.instructions || 'No special instructions.';
@@ -381,7 +439,33 @@
         inputAccessKey.value = ''; // clear just in case
       }
 
-      instrModal.classList.remove('hidden');
+      // Preflight checklist gate
+      const preflightModal = document.getElementById('preflightModal');
+      const pfTimer = document.getElementById('pfTimer');
+      const pfMaterials = document.getElementById('pfMaterials');
+      const pfNetwork = document.getElementById('pfNetwork');
+      const preflightContinue = document.getElementById('preflightContinue');
+      const preflightCancel = document.getElementById('preflightCancel');
+
+      const updatePf = () => {
+        const ok = (pfTimer?.checked) && (pfMaterials?.checked) && (pfNetwork?.checked);
+        if (preflightContinue) preflightContinue.disabled = !ok;
+      };
+      [pfTimer, pfMaterials, pfNetwork].forEach(el => el && el.addEventListener('change', updatePf));
+      updatePf();
+
+      const openInstructions = () => {
+        if (preflightModal) preflightModal.classList.add('hidden');
+        instrModal.classList.remove('hidden');
+      };
+
+      if (preflightModal) {
+        preflightModal.classList.remove('hidden');
+        if (preflightCancel) preflightCancel.onclick = () => preflightModal.classList.add('hidden');
+        if (preflightContinue) preflightContinue.onclick = openInstructions;
+      } else {
+        openInstructions();
+      }
 
       confirmStartBtn.onclick = async () => {
         const enteredKey = inputAccessKey.value;
@@ -393,7 +477,7 @@
           access_key: enteredKey
         };
 
-        const checkRes = await fetch(`/api/tests/${testId}/check`, {
+        const checkRes = await studentFetch(`/api/tests/${testId}/check`, {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify(payload)
@@ -417,7 +501,13 @@
         // but typically we'd use a token. 
         // For now, assume /check was the gatekeeper.
         
-        window.location.href = 'test.html?' + params.toString();
+        const token = getStudentToken();
+        const targetUrl = 'test.html?' + params.toString();
+        _setLastSession({ url: targetUrl, startedAt: new Date().toISOString(), student_db_id: currentUser ? currentUser.id : null });
+        if (token) {
+          localStorage.setItem('cln_last_session', JSON.stringify({ url: targetUrl, startedAt: new Date().toISOString(), student_db_id: currentUser ? currentUser.id : null, token }));
+        }
+        window.location.href = targetUrl;
       };
     });
 
@@ -453,7 +543,36 @@
     }
 
     checkAuth();
+    renderResumeIfAny();
     loadTests();
   </script>
+
+  <!-- BEFORE YOU START MODAL -->
+  <div id="preflightModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-title">Before you start</div>
+      <div class="text-muted" style="font-size:0.9rem; margin-bottom:0.75rem;">Quick checklist so you don’t lose time.</div>
+      <div class="mb-3" style="font-size:0.9rem; color:#e2e8f0;">
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="pfTimer">
+          <label class="form-check-label" for="pfTimer">I understand the timer will run (or the test is marked PRACTICE).</label>
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="pfMaterials">
+          <label class="form-check-label" for="pfMaterials">I have only allowed materials (no extra tabs / notes unless permitted).</label>
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="pfNetwork">
+          <label class="form-check-label" for="pfNetwork">My network is stable (don’t switch Wi‑Fi during the exam).</label>
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <button id="preflightContinue" class="btn btn-fx-primary w-100" disabled>Continue</button>
+        <button id="preflightCancel" class="btn btn-fx-secondary w-100">Cancel</button>
+      </div>
+      <div class="text-muted mt-3" style="font-size:0.8rem;">Tip: you can use keyboard shortcuts during the test (A–D, 1–4, N/P).</div>
+    </div>
+  </div>
+
 </body>
 </html>
