@@ -929,7 +929,7 @@ app.post('/api/tests/:testId/submit', (req, res) => {
   );
 });
 
-// Start Attempt (for Live Monitoring)
+// Start Attempt (for Live Monitoring) + Resume existing in-progress
 app.post('/api/tests/:testId/start', (req, res) => {
   const testId = req.params.testId;
   const { student_name, student_id, student_db_id } = req.body;
@@ -943,15 +943,25 @@ app.post('/api/tests/:testId/start', (req, res) => {
       return res.json({ attempt_id: null });
     }
 
-    const cleanSql = `UPDATE attempts SET status = 'abandoned' WHERE test_id = ? AND status = 'in-progress' AND (student_db_id = ? OR (student_db_id IS NULL AND student_name = ?))`;
+    // If there's an existing in-progress attempt for this student+test, resume it.
+    let sql = 'SELECT id FROM attempts WHERE test_id = ? AND status = "in-progress" AND ';
+    const params = [testId];
+    if (student_db_id) { sql += 'student_db_id = ?'; params.push(student_db_id); }
+    else { sql += 'student_db_id IS NULL AND student_name = ?'; params.push(student_name); }
+    sql += ' ORDER BY id DESC LIMIT 1';
 
-    db.run(cleanSql, [testId, student_db_id || -1, student_name], (err2) => {
+    db.get(sql, params, (errExisting, row) => {
+      if (!errExisting && row && row.id) {
+        return res.json({ attempt_id: row.id, resumed: true });
+      }
+
+      // Otherwise create new attempt
       db.run(
         'INSERT INTO attempts (student_name, student_id, student_db_id, test_id, score, total, status) VALUES (?, ?, ?, ?, 0, 0, ?)',
         [student_name, student_id || '', student_db_id || null, testId, 'in-progress'],
         function(err3) {
           if (err3) return res.status(500).json({ error: err3.message });
-          res.json({ attempt_id: this.lastID });
+          res.json({ attempt_id: this.lastID, resumed: false });
         }
       );
     });
@@ -964,6 +974,98 @@ app.post('/api/attempts/:attemptId/violation', (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ success: true });
   });
+});
+
+// Student autosave / resume (no admin auth). Uses attempt id as capability.
+app.post('/api/attempts/:attemptId/save', async (req, res) => {
+  try {
+    const attemptId = parseInt(req.params.attemptId, 10);
+    if (!attemptId) return res.status(400).json({ error: 'Invalid attempt id' });
+
+    const { remaining_seconds, active_index, answers, flagged } = req.body || {};
+
+    const attempt = await dbGetAsync('SELECT id, status FROM attempts WHERE id = ?', [attemptId]);
+    if (!attempt) return res.status(404).json({ error: 'Attempt not found' });
+    if (attempt.status !== 'in-progress') {
+      return res.status(409).json({ error: 'Attempt is not in progress' });
+    }
+
+    // Save state
+    await dbRunAsync(
+      `INSERT INTO attempt_state (attempt_id, remaining_seconds, active_index, updated_at)
+       VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+       ON CONFLICT(attempt_id) DO UPDATE SET remaining_seconds=excluded.remaining_seconds, active_index=excluded.active_index, updated_at=CURRENT_TIMESTAMP`,
+      [attemptId, Number.isFinite(remaining_seconds) ? remaining_seconds : null, Number.isFinite(active_index) ? active_index : null]
+    );
+
+    // Save answers (replace per question)
+    if (Array.isArray(answers)) {
+      const byQ = new Map();
+      for (const a of answers) {
+        if (!a) continue;
+        const qid = parseInt(a.question_id, 10);
+        const oid = parseInt(a.option_id, 10);
+        if (!qid || !oid) continue;
+        if (!byQ.has(qid)) byQ.set(qid, []);
+        byQ.get(qid).push(oid);
+      }
+
+      for (const [qid, oids] of byQ.entries()) {
+        await dbRunAsync('DELETE FROM attempt_answers WHERE attempt_id = ? AND question_id = ?', [attemptId, qid]);
+        for (const oid of oids) {
+          await dbRunAsync(
+            'INSERT OR REPLACE INTO attempt_answers (attempt_id, question_id, option_id, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
+            [attemptId, qid, oid]
+          );
+        }
+      }
+    }
+
+    // Save flags (replace all)
+    if (Array.isArray(flagged)) {
+      await dbRunAsync('DELETE FROM attempt_flags WHERE attempt_id = ?', [attemptId]);
+      for (const qidRaw of flagged) {
+        const qid = parseInt(qidRaw, 10);
+        if (!qid) continue;
+        await dbRunAsync(
+          'INSERT OR REPLACE INTO attempt_flags (attempt_id, question_id, flagged, updated_at) VALUES (?, ?, 1, CURRENT_TIMESTAMP)',
+          [attemptId, qid]
+        );
+      }
+    }
+
+    res.json({ success: true, saved_at: new Date().toISOString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/attempts/:attemptId/state', async (req, res) => {
+  try {
+    const attemptId = parseInt(req.params.attemptId, 10);
+    if (!attemptId) return res.status(400).json({ error: 'Invalid attempt id' });
+
+    const attempt = await dbGetAsync('SELECT id, status FROM attempts WHERE id = ?', [attemptId]);
+    if (!attempt) return res.status(404).json({ error: 'Attempt not found' });
+
+    const state = await dbGetAsync('SELECT remaining_seconds, active_index, updated_at FROM attempt_state WHERE attempt_id = ?', [attemptId]);
+    const answers = await new Promise((resolve, reject) => {
+      db.all('SELECT question_id, option_id FROM attempt_answers WHERE attempt_id = ?', [attemptId], (e, rows) => e ? reject(e) : resolve(rows || []));
+    });
+    const flags = await new Promise((resolve, reject) => {
+      db.all('SELECT question_id FROM attempt_flags WHERE attempt_id = ? AND flagged = 1', [attemptId], (e, rows) => e ? reject(e) : resolve(rows || []));
+    });
+
+    res.json({
+      attempt_id: attemptId,
+      status: attempt.status,
+      state: state || null,
+      answers,
+      flagged: (flags || []).map(r => r.question_id)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/attempts/:id', requireAdminAuth, (req, res) => {
@@ -1020,6 +1122,30 @@ async function runMigrations() {
   await ensureColumn('attempts', 'student_db_id', 'ALTER TABLE attempts ADD COLUMN student_db_id INTEGER');
   await ensureColumn('attempts', 'status', `ALTER TABLE attempts ADD COLUMN status TEXT DEFAULT 'submitted'`);
   await ensureColumn('attempts', 'violations', 'ALTER TABLE attempts ADD COLUMN violations INTEGER DEFAULT 0');
+
+  // Tables for autosave/resume (safe to run repeatedly)
+  await dbRunAsync(`CREATE TABLE IF NOT EXISTS attempt_state (
+    attempt_id INTEGER PRIMARY KEY,
+    remaining_seconds INTEGER,
+    active_index INTEGER,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  await dbRunAsync(`CREATE TABLE IF NOT EXISTS attempt_answers (
+    attempt_id INTEGER NOT NULL,
+    question_id INTEGER NOT NULL,
+    option_id INTEGER NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (attempt_id, question_id, option_id)
+  )`);
+
+  await dbRunAsync(`CREATE TABLE IF NOT EXISTS attempt_flags (
+    attempt_id INTEGER NOT NULL,
+    question_id INTEGER NOT NULL,
+    flagged INTEGER NOT NULL DEFAULT 1,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (attempt_id, question_id)
+  )`);
 }
 
 initDatabase(async (err) => {

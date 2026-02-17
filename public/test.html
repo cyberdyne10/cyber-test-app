@@ -75,6 +75,7 @@
         <div class="text-end">
           <div class="timer-label mb-1">Session Timer</div>
           <div class="timer-large" id="timer">--:--</div>
+          <div id="saveStatus" class="text-muted" style="font-size:0.8rem; margin-top:6px;">Not saved yet</div>
         </div>
       </div>
 
@@ -138,6 +139,30 @@
     let attemptId = null;
     let isPractice = false;
 
+    const urlAttemptId = params.get('attempt');
+    if (urlAttemptId) {
+      const n = parseInt(urlAttemptId, 10);
+      if (Number.isFinite(n) && n > 0) attemptId = n;
+    }
+
+    function setSaveStatus(text, color) {
+      const el = document.getElementById('saveStatus');
+      if (!el) return;
+      el.textContent = text;
+      el.style.color = color || '';
+    }
+
+    function serializeAnswers() {
+      const out = [];
+      document.querySelectorAll('[name^="q_"]').forEach(el => {
+        if (el.checked) {
+          const questionId = el.name.substring(2);
+          out.push({ question_id: parseInt(questionId, 10), option_id: parseInt(el.value, 10) });
+        }
+      });
+      return out;
+    }
+
     const infoEl = document.getElementById('info');
     const isFullSession = sessionMode === 'full' && sessionOrder;
     let headerMeta = `Candidate: ${studentName} ${studentId ? '(' + studentId + ')' : ''}`;
@@ -167,6 +192,15 @@
       });
       const startData = await startRes.json();
       attemptId = startData.attempt_id;
+
+      // Persist attempt id in URL for resume
+      if (attemptId) {
+        try {
+          const u = new URL(window.location.href);
+          u.searchParams.set('attempt', String(attemptId));
+          history.replaceState(null, '', u.toString());
+        } catch(e) {}
+      }
 
       // 2. Load Questions
       const res = await fetch(`/api/tests/${testId}/full`);
@@ -375,6 +409,96 @@
       buildNavigator();
       attachFlagButtons();
       setTimeout(() => { setActiveQuestion(0); updateCountsAndNav(); }, 60);
+
+      // Restore any saved state (best-effort)
+      async function restoreProgress() {
+        if (!attemptId) return;
+        try {
+          const r = await fetch('/api/attempts/' + attemptId + '/state', { cache: 'no-store' });
+          if (!r.ok) return;
+          const st = await r.json();
+          if (!st || !Array.isArray(st.answers)) return;
+
+          // restore answers
+          for (const a of st.answers) {
+            const qid = a.question_id;
+            const oid = a.option_id;
+            const el = document.querySelector('input[name="q_' + qid + '"][value="' + oid + '"]');
+            if (el) el.checked = true;
+          }
+
+          // restore flags
+          if (Array.isArray(st.flagged)) {
+            st.flagged.forEach(qid => flagged.add(qid));
+          }
+
+          // restore active question
+          if (st.state && Number.isFinite(st.state.active_index)) {
+            setActiveQuestion(st.state.active_index);
+          }
+
+          updateCountsAndNav();
+          attachFlagButtons();
+
+          setSaveStatus('Restored saved progress', '#94a3b8');
+        } catch (e) {}
+      }
+
+      let _saveTimer = null;
+      async function saveProgress() {
+        if (!attemptId || isPractice) return;
+        if (!navigator.onLine) {
+          setSaveStatus('Offline — changes not saved', '#f59e0b');
+          return;
+        }
+        setSaveStatus('Saving…', '#38bdf8');
+
+        const payload = {
+          remaining_seconds: Number.isFinite(window._remainingSeconds) ? window._remainingSeconds : null,
+          active_index: _activeQ,
+          answers: serializeAnswers(),
+          flagged: Array.from(flagged.values())
+        };
+
+        try {
+          const r = await fetch('/api/attempts/' + attemptId + '/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            setSaveStatus((data && data.error) ? ('Save failed: ' + data.error) : ('Save failed (' + r.status + ')'), '#ef4444');
+            return;
+          }
+          setSaveStatus('Saved', '#22c55e');
+        } catch (e) {
+          setSaveStatus('Save failed (network)', '#ef4444');
+        }
+      }
+
+      function scheduleSave() {
+        if (_saveTimer) clearTimeout(_saveTimer);
+        _saveTimer = setTimeout(saveProgress, 700);
+      }
+
+      document.getElementById('testForm').addEventListener('change', scheduleSave);
+      document.addEventListener('qactivechange', scheduleSave);
+      window.addEventListener('online', scheduleSave);
+
+      // periodic autosave
+      setInterval(() => {
+        if (!attemptId || isPractice) return;
+        saveProgress();
+      }, 12000);
+
+      restoreProgress();
+
+      // Track focus to prompt save
+      window.addEventListener('beforeunload', () => {
+        try { if (attemptId && !isPractice) navigator.sendBeacon('/api/attempts/' + attemptId + '/save', new Blob([JSON.stringify({ remaining_seconds: window._remainingSeconds, active_index: _activeQ, answers: serializeAnswers(), flagged: Array.from(flagged.values()) })], { type: 'application/json' })); } catch(e) {}
+      });
+
 
     }
 

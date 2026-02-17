@@ -57,3 +57,30 @@ CREATE TABLE IF NOT EXISTS attempts (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (test_id) REFERENCES tests(id)
 );
+
+-- Persist in-progress attempt state for autosave/resume
+CREATE TABLE IF NOT EXISTS attempt_state (
+  attempt_id INTEGER PRIMARY KEY,
+  remaining_seconds INTEGER,
+  active_index INTEGER,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (attempt_id) REFERENCES attempts(id)
+);
+
+CREATE TABLE IF NOT EXISTS attempt_answers (
+  attempt_id INTEGER NOT NULL,
+  question_id INTEGER NOT NULL,
+  option_id INTEGER NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (attempt_id, question_id, option_id),
+  FOREIGN KEY (attempt_id) REFERENCES attempts(id)
+);
+
+CREATE TABLE IF NOT EXISTS attempt_flags (
+  attempt_id INTEGER NOT NULL,
+  question_id INTEGER NOT NULL,
+  flagged INTEGER NOT NULL DEFAULT 1,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (attempt_id, question_id),
+  FOREIGN KEY (attempt_id) REFERENCES attempts(id)
+);
