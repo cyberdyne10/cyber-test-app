@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS questions (
   marks INTEGER DEFAULT 1,
   image_url TEXT,
   question_type TEXT DEFAULT 'single',
+  explanation TEXT,
   FOREIGN KEY (test_id) REFERENCES tests(id)
 );
 

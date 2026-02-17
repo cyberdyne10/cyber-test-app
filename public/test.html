@@ -44,6 +44,23 @@
       background: rgba(245,158,11,0.15);
       color: #fde68a;
     }
+
+    /* Mobile polish */
+    @media (max-width: 992px) {
+      #qNav { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+    }
+    @media (max-width: 576px) {
+      #qNav { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+      #bottomActionBar {
+        position: sticky;
+        bottom: 0;
+        background: rgba(15,23,42,0.92);
+        padding: 10px 10px;
+        border-radius: 14px;
+        border: 1px solid rgba(148,163,184,0.18);
+        backdrop-filter: blur(8px);
+      }
+    }
   </style>
 </head>
 <body>
@@ -103,7 +120,7 @@
         </div>
       </div>
 
-      <div class="d-flex justify-content-between align-items-center mt-4 btn-row-stack">
+      <div class="d-flex justify-content-between align-items-center mt-4 btn-row-stack" id="bottomActionBar">
         <div class="text-muted small">The test will auto-submit when the timer reaches zero.</div>
         <button id="submitBtn" type="button" class="btn btn-fx-primary">
           <span class="pulse-dot"></span>
@@ -534,7 +551,19 @@
       if (data.error) { alert('Error: ' + data.error); return; }
 
       document.getElementById('result').style.display = 'block';
-      document.getElementById('scoreText').textContent = `Score: ${data.score} / ${data.total}`;
+
+      // Summary chip
+      const totalQuestions = getQuestionBlocks().length;
+      const answeredNow = Number(document.getElementById('answeredCount')?.textContent || 0);
+      const flaggedNow = Number(document.getElementById('flaggedCount')?.textContent || 0);
+      const durationUsed = (typeof window._initialRemainingSeconds === 'number' && typeof window._remainingSeconds === 'number')
+        ? Math.max(0, window._initialRemainingSeconds - window._remainingSeconds)
+        : null;
+      const minsUsed = durationUsed != null ? Math.floor(durationUsed / 60) : null;
+      const secsUsed = durationUsed != null ? (durationUsed % 60) : null;
+      const timeUsedText = durationUsed != null ? ` • Time used: ${String(minsUsed).padStart(2,'0')}:${String(secsUsed).padStart(2,'0')}` : '';
+
+      document.getElementById('scoreText').textContent = `Score: ${data.score} / ${data.total} • Answered: ${answeredNow}/${totalQuestions} • Flagged: ${flaggedNow}${timeUsedText}`;
 
       // If in full-session mode, show a brief notice and redirect to next test automatically
       const nextNoticeEl = document.getElementById('nextExamNotice');
@@ -593,6 +622,17 @@
             line2.appendChild(correct);
             block.appendChild(line2);
           }
+
+          // Practice mode: show explanation (if any)
+          if (isPractice && item.explanation) {
+            const exp = document.createElement('div');
+            exp.className = 'review-line mt-2';
+            exp.style.color = '#e2e8f0';
+            exp.style.opacity = '0.95';
+            exp.innerHTML = `<span class="text-muted">Explanation:</span> ${String(item.explanation)}`;
+            block.appendChild(exp);
+          }
+
           reviewEl.appendChild(block);
         });
         reviewEl.style.display = 'block';
@@ -656,6 +696,8 @@
 
     function startTimer(durationMinutes) {
       let remaining = durationMinutes * 60;
+      window._remainingSeconds = remaining;
+      window._initialRemainingSeconds = remaining;
       const timerEl = document.getElementById('timer');
       let warned5min = false;
 
@@ -667,6 +709,7 @@
       render();
       window._timerInterval = setInterval(() => {
         remaining--;
+        window._remainingSeconds = remaining;
 
         if (!warned5min && remaining === 5 * 60) {
           warned5min = true;

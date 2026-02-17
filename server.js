@@ -617,7 +617,9 @@ app.post('/api/tests/:testId/questions', requireAdminAuth, upload.single('image'
 
   const imageUrl = req.file ? '/uploads/' + req.file.filename : null;
 
-  db.run('INSERT INTO questions (test_id, text, marks, image_url, question_type) VALUES (?, ?, ?, ?, ?)', [testId, text, marks, imageUrl, questionType], function(err) {
+  const explanation = req.body.explanation || '';
+
+  db.run('INSERT INTO questions (test_id, text, marks, image_url, question_type, explanation) VALUES (?, ?, ?, ?, ?, ?)', [testId, text, marks, imageUrl, questionType, explanation], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     const questionId = this.lastID;
     const stmt = db.prepare('INSERT INTO options (question_id, text, is_correct) VALUES (?, ?, ?)');
@@ -632,7 +634,7 @@ app.post('/api/tests/:testId/questions', requireAdminAuth, upload.single('image'
 app.get('/api/tests/:testId/questions-full', requireAdminAuth, (req, res) => {
   const testId = req.params.testId;
   db.all(
-    `SELECT q.id as question_id, q.text as question_text, q.marks, q.image_url, q.question_type,
+    `SELECT q.id as question_id, q.text as question_text, q.marks, q.image_url, q.question_type, q.explanation,
             o.id as option_id, o.text as option_text, o.is_correct
      FROM questions q
      JOIN options o ON q.id = o.question_id
@@ -644,7 +646,7 @@ app.get('/api/tests/:testId/questions-full', requireAdminAuth, (req, res) => {
       const questions = {};
       rows.forEach(r => {
         if (!questions[r.question_id]) {
-          questions[r.question_id] = { id: r.question_id, text: r.question_text, marks: r.marks, image_url: r.image_url, question_type: r.question_type || 'single', options: [] };
+          questions[r.question_id] = { id: r.question_id, text: r.question_text, marks: r.marks, image_url: r.image_url, question_type: r.question_type || 'single', explanation: r.explanation || '', options: [] };
         }
         questions[r.question_id].options.push({ id: r.option_id, text: r.option_text, is_correct: r.is_correct === 1 });
       });
@@ -656,7 +658,7 @@ app.get('/api/tests/:testId/questions-full', requireAdminAuth, (req, res) => {
 app.post('/api/questions/:questionId/update', requireAdminAuth, (req, res) => {
   const questionId = req.params.questionId;
   const { text, marks, options, question_type } = req.body;
-  db.run('UPDATE questions SET text = ?, marks = ?, question_type = ? WHERE id = ?', [text, marks || 1, question_type || 'single', questionId], err => {
+  db.run('UPDATE questions SET text = ?, marks = ?, question_type = ?, explanation = ? WHERE id = ?', [text, marks || 1, question_type || 'single', (req.body.explanation || ''), questionId], err => {
     if (err) return res.status(500).json({ error: err.message });
     const stmt = db.prepare('UPDATE options SET text = ?, is_correct = ? WHERE id = ?');
     for (const opt of options) { if (opt.id) stmt.run(opt.text, opt.is_correct ? 1 : 0, opt.id); }
@@ -823,7 +825,7 @@ app.post('/api/tests/:testId/submit', (req, res) => {
       const qPlaceholders = qIds.map(() => '?').join(',');
 
       db.all(
-        `SELECT id, text, marks, question_type FROM questions WHERE id IN (${qPlaceholders})`,
+        `SELECT id, text, marks, question_type, explanation FROM questions WHERE id IN (${qPlaceholders})`,
         qIds,
         (errQ, qRows) => {
           if (errQ) return res.status(500).json({ error: errQ.message });
@@ -888,6 +890,7 @@ app.post('/api/tests/:testId/submit', (req, res) => {
                    question_id: qId,
                    question_text: qData.text,
                    marks: qMarks,
+                   explanation: qData.explanation || '',
                    selected_option: { text: selectedTexts.join(', '), is_correct: isCorrect },
                    correct_option: { text: correctOpts.map(c => c.text).join(', ') }
                  });
@@ -897,9 +900,12 @@ app.post('/api/tests/:testId/submit', (req, res) => {
                db.get('SELECT type FROM tests WHERE id = ?', [testId], (errT, testRow) => {
                  if (errT || !testRow) return res.status(500).json({ error: 'Test lookup failed' });
                  if (testRow.type === 'practice') {
-                   // Just return score/detailed, no DB write, no attempt id
+                   // Practice mode: return score + detailed WITH explanations
                    return res.json({ attempt_id: null, score, total: totalPossible, detailed });
                  }
+
+                 // Exam/mock: do NOT leak explanations
+                 detailed.forEach(d => { if (d) d.explanation = ''; });
 
                  if (attempt_id) {
                    db.run(
@@ -1118,6 +1124,7 @@ async function runMigrations() {
   await ensureColumn('questions', 'marks', 'ALTER TABLE questions ADD COLUMN marks INTEGER DEFAULT 1');
   await ensureColumn('questions', 'image_url', 'ALTER TABLE questions ADD COLUMN image_url TEXT');
   await ensureColumn('questions', 'question_type', `ALTER TABLE questions ADD COLUMN question_type TEXT DEFAULT 'single'`);
+  await ensureColumn('questions', 'explanation', 'ALTER TABLE questions ADD COLUMN explanation TEXT');
 
   await ensureColumn('attempts', 'student_db_id', 'ALTER TABLE attempts ADD COLUMN student_db_id INTEGER');
   await ensureColumn('attempts', 'status', `ALTER TABLE attempts ADD COLUMN status TEXT DEFAULT 'submitted'`);

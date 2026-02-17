@@ -630,6 +630,11 @@
                 </div>
 
                 <div class="mb-3">
+                  <label class="form-label">Explanation (Practice review)</label>
+                  <textarea id="questionExplanation" class="form-control" placeholder="Shown after submit in PRACTICE mode. Keep it short and clear."></textarea>
+                </div>
+
+                <div class="mb-3">
                   <label class="form-label">Image (Optional)</label>
                   <input type="file" id="questionImage" class="form-control" accept="image/*" />
                 </div>
@@ -949,6 +954,11 @@
         txt.style.fontSize = '0.92rem';
         txt.textContent = `[${q.marks} pts] ${q.text}`;
 
+        const expHint = document.createElement('div');
+        expHint.className = 'text-muted';
+        expHint.style.fontSize = '0.78rem';
+        expHint.textContent = (q.explanation && String(q.explanation).trim()) ? 'Has explanation' : 'No explanation';
+
         const sub = document.createElement('div');
         sub.className = 'text-muted';
         sub.style.fontSize = '0.82rem';
@@ -958,6 +968,7 @@
         const left = document.createElement('div');
         left.appendChild(txt);
         left.appendChild(sub);
+        left.appendChild(expHint);
 
         const delBtn = document.createElement('button');
         delBtn.textContent = 'Delete';
@@ -980,6 +991,8 @@
       document.getElementById('questionText').value = q.text || q.question_text;
       document.getElementById('questionMarks').value = q.marks;
       document.getElementById('questionType').value = q.question_type || 'single';
+      const expEl = document.getElementById('questionExplanation');
+      if (expEl) expEl.value = q.explanation || '';
 
       [1,2,3,4].forEach(i => {
         document.getElementById('opt'+i).value = '';
@@ -1020,6 +1033,8 @@
       document.getElementById('questionText').value = '';
       document.getElementById('questionMarks').value = '1';
       document.getElementById('questionType').value = 'single';
+      const expEl = document.getElementById('questionExplanation');
+      if (expEl) expEl.value = '';
       document.getElementById('questionImage').value = '';
       [1,2,3,4].forEach(i => {
         document.getElementById('opt'+i).value = '';
@@ -1490,6 +1505,7 @@
         if (!testId) return alert('Select a test first.');
 
         const text = document.getElementById('questionText').value;
+        const explanation = document.getElementById('questionExplanation')?.value || '';
         const marks = document.getElementById('questionMarks').value;
         const qType = document.getElementById('questionType').value;
         const file = document.getElementById('questionImage').files[0];
@@ -1505,7 +1521,7 @@
         });
 
         if (editingQuestionId) {
-          const payload = { text, marks, question_type: qType, options };
+          const payload = { text, explanation, marks, question_type: qType, options };
           await apiFetch(`/api/questions/${editingQuestionId}/update`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -1516,6 +1532,7 @@
         } else {
           const fd = new FormData();
           fd.append('text', text);
+          fd.append('explanation', explanation);
           fd.append('marks', marks);
           fd.append('question_type', qType);
           fd.append('options', JSON.stringify(options));
@@ -1525,6 +1542,8 @@
           alert('Question added');
 
           document.getElementById('questionText').value = '';
+          const expEl = document.getElementById('questionExplanation');
+          if (expEl) expEl.value = '';
           document.getElementById('questionImage').value = '';
           [1,2,3,4].forEach(i => {
             document.getElementById('opt'+i).value = '';
