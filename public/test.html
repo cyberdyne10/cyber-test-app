@@ -147,6 +147,49 @@
 
   <script>
     const params = new URLSearchParams(window.location.search);
+
+    // Simple submit confirmation modal
+    function showConfirmModal({ title, message, confirmText = 'Submit', cancelText = 'Go back' }) {
+      return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.background = 'rgba(0,0,0,0.75)';
+        overlay.style.zIndex = '2000';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.padding = '16px';
+
+        const card = document.createElement('div');
+        card.style.maxWidth = '520px';
+        card.style.width = '100%';
+        card.style.background = '#0f172a';
+        card.style.border = '1px solid rgba(148,163,184,0.25)';
+        card.style.borderRadius = '16px';
+        card.style.boxShadow = '0 20px 60px rgba(0,0,0,0.6)';
+        card.style.padding = '18px';
+        card.innerHTML = `
+          <div style="font-weight:800; font-size:1.05rem; color:#fff;">${title}</div>
+          <div style="margin-top:8px; color:#cbd5e1; line-height:1.4; white-space:pre-wrap;">${message}</div>
+          <div style="display:flex; gap:10px; margin-top:14px;">
+            <button id="cmCancel" class="btn btn-fx-secondary w-100" type="button">${cancelText}</button>
+            <button id="cmOk" class="btn btn-fx-primary w-100" type="button">${confirmText}</button>
+          </div>
+        `;
+
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        const cleanup = () => overlay.remove();
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) { cleanup(); resolve(false); }
+        });
+        card.querySelector('#cmCancel').addEventListener('click', () => { cleanup(); resolve(false); });
+        card.querySelector('#cmOk').addEventListener('click', () => { cleanup(); resolve(true); });
+      });
+    }
+
     const studentName = params.get('name');
     const studentId = params.get('id');
     const dbId = params.get('db_id'); 
@@ -684,7 +727,25 @@
       if (window._timerInterval) clearInterval(window._timerInterval);
     }
 
-    document.getElementById('submitBtn').addEventListener('click', () => submitAnswers(false));
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+      // Before submit, warn about unanswered/flagged
+      const total = getQuestionBlocks().length;
+      const answered = Number(document.getElementById('answeredCount')?.textContent || 0);
+      const flagged = Number(document.getElementById('flaggedCount')?.textContent || 0);
+      const unanswered = Math.max(0, total - answered);
+
+      if (!isPractice && (unanswered > 0 || flagged > 0)) {
+        const ok = await showConfirmModal({
+          title: 'Submit answers?',
+          message: `Unanswered: ${unanswered}\nFlagged for review: ${flagged}\n\nYou can go back to review before submitting.`,
+          confirmText: 'Submit now',
+          cancelText: 'Go back'
+        });
+        if (!ok) return;
+      }
+
+      submitAnswers(false);
+    });
 
     function showTimeWarning() {
       // Lightweight, non-blocking warning (no alert())

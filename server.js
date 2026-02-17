@@ -224,6 +224,23 @@ const adminLoginLimiter = rateLimit({
   message: { error: 'Too many login attempts. Try again later.' }
 });
 
+// Student rate limits
+const studentAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 25,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Try again later.' }
+});
+
+const studentExamLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Slow down.' }
+});
+
 // ADMIN AUTH ROUTES
 app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
   try {
@@ -294,7 +311,7 @@ if (IS_PROD && !process.env.STUDENT_JWT_SECRET) {
   process.exit(1);
 }
 
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', studentAuthLimiter, async (req, res) => {
   try {
     const { name, username, password } = req.body;
     if (!name || !username || !password) return res.status(400).json({ error: 'Missing fields' });
@@ -322,7 +339,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', studentAuthLimiter, (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
 
@@ -364,7 +381,7 @@ app.post('/api/auth/login', (req, res) => {
   });
 });
 
-app.post('/api/auth/change-password', async (req, res) => {
+app.post('/api/auth/change-password', studentAuthLimiter, async (req, res) => {
   try {
     const { username, currentPassword, newPassword } = req.body;
     if (!username || !currentPassword || !newPassword) {
@@ -716,7 +733,7 @@ app.delete('/api/questions/:questionId', requireAdminAuth, (req, res) => {
 });
 
 // Check eligibility (Attempts + Access Key + Schedule)
-app.post('/api/tests/:testId/check', (req, res) => {
+app.post('/api/tests/:testId/check', requireStudentAuth, (req, res) => {
   const testId = req.params.testId;
   const { student_name, student_db_id, access_key } = req.body;
 
@@ -753,7 +770,7 @@ app.post('/api/tests/:testId/check', (req, res) => {
   });
 });
 
-app.get('/api/tests/:testId/info', (req, res) => {
+app.get('/api/tests/:testId/info', requireStudentAuth, (req, res) => {
   db.get('SELECT id, name, description, duration_minutes, instructions, max_attempts, type, access_key, start_time, end_time, questions_per_attempt, CASE WHEN access_key IS NOT NULL AND access_key != "" THEN 1 ELSE 0 END as is_locked FROM tests WHERE id = ?', [req.params.testId], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(row);
@@ -797,7 +814,7 @@ app.put('/api/tests/:testId', requireAdminAuth, (req, res) => {
   );
 });
 
-app.get('/api/tests/:testId/full', requireStudentAuth, (req, res) => {
+app.get('/api/tests/:testId/full', requireStudentAuth, studentExamLimiter, (req, res) => {
   const testId = req.params.testId;
   const attemptId = req.query.attempt ? parseInt(req.query.attempt, 10) : null;
   if (!attemptId) {
@@ -880,7 +897,7 @@ app.get('/api/tests/:testId/full', requireStudentAuth, (req, res) => {
   });
 });
 
-app.post('/api/tests/:testId/submit', requireStudentAuth, async (req, res) => {
+app.post('/api/tests/:testId/submit', requireStudentAuth, studentExamLimiter, async (req, res) => {
   const testId = req.params.testId;
   const { answers, attempt_id } = req.body;
 
@@ -1036,7 +1053,7 @@ app.post('/api/tests/:testId/submit', requireStudentAuth, async (req, res) => {
 });
 
 // Start Attempt (for Live Monitoring) + Resume existing in-progress
-app.post('/api/tests/:testId/start', requireStudentAuth, async (req, res) => {
+app.post('/api/tests/:testId/start', requireStudentAuth, studentExamLimiter, async (req, res) => {
   const testId = req.params.testId;
 
   try {
@@ -1102,7 +1119,7 @@ app.post('/api/attempts/:attemptId/violation', requireStudentAuth, async (req, r
 });
 
 // Student autosave / resume (student-owned attempt only)
-app.post('/api/attempts/:attemptId/save', requireStudentAuth, async (req, res) => {
+app.post('/api/attempts/:attemptId/save', requireStudentAuth, studentExamLimiter, async (req, res) => {
   try {
     const attemptId = parseInt(req.params.attemptId, 10);
     if (!attemptId) return res.status(400).json({ error: 'Invalid attempt id' });
@@ -1166,7 +1183,7 @@ app.post('/api/attempts/:attemptId/save', requireStudentAuth, async (req, res) =
   }
 });
 
-app.get('/api/attempts/:attemptId/state', requireStudentAuth, async (req, res) => {
+app.get('/api/attempts/:attemptId/state', requireStudentAuth, studentExamLimiter, async (req, res) => {
   try {
     const attemptId = parseInt(req.params.attemptId, 10);
     if (!attemptId) return res.status(400).json({ error: 'Invalid attempt id' });
