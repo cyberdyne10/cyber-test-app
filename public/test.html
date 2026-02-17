@@ -194,6 +194,7 @@
     const studentId = params.get('id');
     const dbId = params.get('db_id'); 
     const testId = params.get('test');
+    const practiceSetId = params.get('set');
     const sessionMode = params.get('session'); // e.g. 'full'
     const sessionOrder = params.get('order');  // comma-separated test ids
     let attemptId = null;
@@ -279,13 +280,27 @@
       }
 
       // 2. Load Questions
-      const fullUrl = attemptId ? `/api/tests/${testId}/full?attempt=${encodeURIComponent(attemptId)}` : `/api/tests/${testId}/full`;
-      const res = await studentFetch(fullUrl);
-      const data = await res.json();
+      let data;
+      if (practiceSetId) {
+        const resSet = await studentFetch(`/api/practice-sets/${encodeURIComponent(practiceSetId)}`);
+        data = await resSet.json();
+        if (!resSet.ok) {
+          alert(data.error || 'Unable to load practice set');
+          return;
+        }
+      } else {
+        const fullUrl = attemptId ? `/api/tests/${testId}/full?attempt=${encodeURIComponent(attemptId)}` : `/api/tests/${testId}/full`;
+        const res = await studentFetch(fullUrl);
+        data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Unable to load exam');
+          return;
+        }
+      }
       
       let questions = data.questions || [];
       const config = data.test_config || {};
-      isPractice = config.type === 'practice';
+      isPractice = (config.type === 'practice') || !!practiceSetId;
 
       // Test type badge
       const badge = document.getElementById('testTypeBadge');
@@ -406,6 +421,7 @@
 
       // Build navigator + answered/flag state
       const flagged = new Set();
+      window._flaggedSet = flagged;
 
       function isQuestionAnswered(questionId) {
         const inputs = Array.from(document.querySelectorAll('[name="q_' + questionId + '"]'));
@@ -619,11 +635,9 @@
         return;
       }
 
+      // Practice set mode: local scoring still uses server submit, but does not create attempts
       const payload = {
-        attempt_id: attemptId, // Submit against the live attempt
-        student_name: studentName,
-        student_id: studentId,
-        student_db_id: dbId ? parseInt(dbId) : null,
+        attempt_id: attemptId, // exam/mock attempts only
         answers
       };
 
@@ -721,6 +735,54 @@
 
           reviewEl.appendChild(block);
         });
+        // Add "Practice wrong/flagged" button
+        if (isPractice) {
+          const btnWrap = document.createElement('div');
+          btnWrap.className = 'mt-3 d-flex gap-2 flex-wrap';
+
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-sm btn-outline-info';
+          btn.textContent = 'Practice wrong + flagged questions';
+
+          btn.addEventListener('click', async () => {
+            const wrongIds = (data.detailed || []).filter(x => x && x.selected_option && x.selected_option.is_correct === false).map(x => x.question_id);
+            const flaggedIds = Array.from((window._flaggedSet || new Set()).values());
+            const merged = Array.from(new Set([...(wrongIds || []), ...(flaggedIds || [])])).filter(Boolean);
+
+            if (!merged.length) {
+              alert('No wrong or flagged questions found.');
+              return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Creating practice set…';
+
+            const resSet = await studentFetch('/api/practice-sets', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ test_id: testId, name: 'Wrong + Flagged', question_ids: merged })
+            });
+            const setData = await resSet.json().catch(() => ({}));
+            if (!resSet.ok) {
+              btn.disabled = false;
+              btn.textContent = 'Practice wrong + flagged questions';
+              alert(setData.error || 'Failed to create practice set');
+              return;
+            }
+
+            // Redirect to practice set session
+            const next = new URL(window.location.href);
+            next.searchParams.set('set', String(setData.set_id));
+            next.searchParams.set('test', String(testId));
+            next.searchParams.delete('attempt');
+            window.location.href = next.toString();
+          });
+
+          btnWrap.appendChild(btn);
+          reviewEl.appendChild(btnWrap);
+        }
+
         reviewEl.style.display = 'block';
       }
       document.getElementById('submitBtn').disabled = true;

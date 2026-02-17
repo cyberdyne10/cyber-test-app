@@ -85,3 +85,19 @@ CREATE TABLE IF NOT EXISTS attempt_flags (
   PRIMARY KEY (attempt_id, question_id),
   FOREIGN KEY (attempt_id) REFERENCES attempts(id)
 );
+
+-- Personal practice sets for students
+CREATE TABLE IF NOT EXISTS practice_sets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  student_id INTEGER NOT NULL,
+  test_id INTEGER NOT NULL,
+  name TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS practice_set_items (
+  set_id INTEGER NOT NULL,
+  question_id INTEGER NOT NULL,
+  PRIMARY KEY (set_id, question_id),
+  FOREIGN KEY (set_id) REFERENCES practice_sets(id)
+);

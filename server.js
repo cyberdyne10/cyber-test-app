@@ -1220,6 +1220,94 @@ app.get('/api/attempts/:id', requireAdminAuth, (req, res) => {
   });
 });
 
+// Create a personal practice set from selected question ids
+app.post('/api/practice-sets', requireStudentAuth, studentExamLimiter, async (req, res) => {
+  try {
+    const { test_id, name, question_ids } = req.body || {};
+    const testId = parseInt(test_id, 10);
+    const ids = Array.isArray(question_ids) ? question_ids.map(x => parseInt(x, 10)).filter(Boolean) : [];
+
+    if (!testId) return res.status(400).json({ error: 'test_id is required' });
+    if (!ids.length) return res.status(400).json({ error: 'question_ids is required' });
+
+    // Ensure questions belong to the test
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = await new Promise((resolve, reject) => {
+      db.all(`SELECT id FROM questions WHERE test_id = ? AND id IN (${placeholders})`, [testId, ...ids], (e, r) => e ? reject(e) : resolve(r || []));
+    });
+
+    const valid = new Set((rows || []).map(r => r.id));
+    const filtered = ids.filter(id => valid.has(id));
+    if (!filtered.length) return res.status(400).json({ error: 'No valid questions for this test' });
+
+    const setName = (name && String(name).trim()) ? String(name).trim() : 'Practice Set';
+
+    const ins = await dbRunAsync('INSERT INTO practice_sets (student_id, test_id, name) VALUES (?, ?, ?)', [req.student.id, testId, setName]);
+    const setId = ins.lastID;
+
+    for (const qid of filtered) {
+      await dbRunAsync('INSERT OR IGNORE INTO practice_set_items (set_id, question_id) VALUES (?, ?)', [setId, qid]);
+    }
+
+    res.json({ success: true, set_id: setId, count: filtered.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/practice-sets/:setId', requireStudentAuth, studentExamLimiter, async (req, res) => {
+  try {
+    const setId = parseInt(req.params.setId, 10);
+    if (!setId) return res.status(400).json({ error: 'Invalid set id' });
+
+    const setRow = await dbGetAsync('SELECT id, student_id, test_id, name, created_at FROM practice_sets WHERE id = ?', [setId]);
+    if (!setRow) return res.status(404).json({ error: 'Set not found' });
+    if (setRow.student_id !== req.student.id) return res.status(403).json({ error: 'Forbidden' });
+
+    const qRows = await new Promise((resolve, reject) => {
+      db.all(
+        `SELECT q.id as question_id, q.text as question_text, q.marks, q.image_url, q.question_type, q.explanation,
+                o.id as option_id, o.text as option_text
+         FROM practice_set_items psi
+         JOIN questions q ON psi.question_id = q.id
+         JOIN options o ON q.id = o.question_id
+         WHERE psi.set_id = ?
+         ORDER BY q.id ASC, o.id ASC`,
+        [setId],
+        (e, r) => e ? reject(e) : resolve(r || [])
+      );
+    });
+
+    const questionsMap = {};
+    qRows.forEach(r => {
+      if (!questionsMap[r.question_id]) {
+        questionsMap[r.question_id] = {
+          id: r.question_id,
+          text: r.question_text,
+          marks: r.marks,
+          image_url: r.image_url,
+          question_type: r.question_type || 'single',
+          explanation: r.explanation || '',
+          options: []
+        };
+      }
+      questionsMap[r.question_id].options.push({ id: r.option_id, text: r.option_text });
+    });
+
+    const questions = Object.values(questionsMap);
+    questions.forEach(q => { q.options = shuffle(q.options); });
+
+    res.json({
+      success: true,
+      set: { id: setRow.id, name: setRow.name, test_id: setRow.test_id },
+      test_config: { type: 'practice', duration_minutes: null },
+      questions
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/attempts', requireAdminAuth, (req, res) => {
   db.all('SELECT a.*, t.name AS test_name FROM attempts a JOIN tests t ON a.test_id = t.id WHERE a.status = "submitted" ORDER BY a.created_at DESC', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -1291,6 +1379,21 @@ async function runMigrations() {
     flagged INTEGER NOT NULL DEFAULT 1,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (attempt_id, question_id)
+  )`);
+
+  // Personal practice sets
+  await dbRunAsync(`CREATE TABLE IF NOT EXISTS practice_sets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER NOT NULL,
+    test_id INTEGER NOT NULL,
+    name TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  await dbRunAsync(`CREATE TABLE IF NOT EXISTS practice_set_items (
+    set_id INTEGER NOT NULL,
+    question_id INTEGER NOT NULL,
+    PRIMARY KEY (set_id, question_id)
   )`);
 }
 
