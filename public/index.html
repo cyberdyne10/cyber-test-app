@@ -63,7 +63,10 @@
             <span id="authReg" class="fw-bold" style="font-size:0.95rem; color:#f97316 !important; letter-spacing:0.5px;">--</span>
           </div>
         </div>
-        <button id="logoutBtn" class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;">Logout</button>
+        <div class="d-flex flex-column flex-sm-row gap-2">
+          <button id="openStudentPasswordBtn" class="btn btn-sm btn-outline-primary" style="font-size:0.75rem;">Change password</button>
+          <button id="logoutBtn" class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;">Logout</button>
+        </div>
       </div>
 
       <div class="row-grid mb-3">
@@ -103,6 +106,26 @@
         </button>
         <a href="admin.html" class="btn btn-fx-secondary">Teacher Console</a>
       </div>
+    </div>
+  </div>
+
+  <!-- STUDENT CHANGE PASSWORD MODAL -->
+  <div id="studentPwModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-title text-center">Change Password</div>
+      <form id="studentPwForm">
+        <div class="mb-3">
+          <label class="form-label">Current password</label>
+          <input type="password" id="studentPwCurrent" class="form-control" required />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">New password</label>
+          <input type="password" id="studentPwNew" class="form-control" required />
+          <div class="form-text">Minimum 8 characters.</div>
+        </div>
+        <button type="submit" class="btn btn-fx-primary w-100">Update password</button>
+        <button type="button" id="studentPwCancel" class="btn btn-fx-secondary w-100 mt-2">Cancel</button>
+      </form>
     </div>
   </div>
 
@@ -166,13 +189,13 @@
     let currentUser = null; 
 
     function _getLastSession() {
-      try { return JSON.parse(localStorage.getItem('cln_last_session') || 'null'); } catch (e) { return null; }
+      try { return JSON.parse(sessionStorage.getItem('cln_last_session') || 'null'); } catch (e) { return null; }
     }
     function _setLastSession(obj) {
-      localStorage.setItem('cln_last_session', JSON.stringify(obj));
+      sessionStorage.setItem('cln_last_session', JSON.stringify(obj));
     }
     function _clearLastSession() {
-      localStorage.removeItem('cln_last_session');
+      sessionStorage.removeItem('cln_last_session');
     }
 
     function renderResumeIfAny() {
@@ -198,11 +221,11 @@
     } 
 
     function getStudentToken() {
-      return localStorage.getItem('cln_student_token');
+      return sessionStorage.getItem('cln_student_token');
     }
 
     function checkAuth() {
-      const stored = localStorage.getItem('cln_student_user');
+      const stored = sessionStorage.getItem('cln_student_user');
       const token = getStudentToken();
       if (stored && token) {
         currentUser = JSON.parse(stored);
@@ -235,12 +258,72 @@
     }
 
     function logout() {
-      localStorage.removeItem('cln_student_user');
-      localStorage.removeItem('cln_student_token');
+      sessionStorage.removeItem('cln_student_user');
+      sessionStorage.removeItem('cln_student_token');
+      sessionStorage.removeItem('cln_last_session');
       location.reload();
     }
 
     document.getElementById('logoutBtn').addEventListener('click', logout);
+
+    // Student password change modal logic
+    const studentPwModal = document.getElementById('studentPwModal');
+    const studentPwForm = document.getElementById('studentPwForm');
+    const studentPwCurrent = document.getElementById('studentPwCurrent');
+    const studentPwNew = document.getElementById('studentPwNew');
+
+    document.getElementById('openStudentPasswordBtn').addEventListener('click', () => {
+      if (!currentUser) {
+        alert('You need to be logged in to change your password.');
+        return;
+      }
+      studentPwCurrent.value = '';
+      studentPwNew.value = '';
+      studentPwModal.classList.remove('hidden');
+    });
+
+    document.getElementById('studentPwCancel').addEventListener('click', () => {
+      studentPwModal.classList.add('hidden');
+    });
+
+    studentPwForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentUser) {
+        alert('Session expired, please log in again.');
+        studentPwModal.classList.add('hidden');
+        return;
+      }
+      const currentPassword = studentPwCurrent.value;
+      const newPassword = studentPwNew.value;
+      if (!currentPassword || !newPassword) {
+        alert('Please fill both fields.');
+        return;
+      }
+      if (newPassword.length < 8) {
+        alert('New password must be at least 8 characters.');
+        return;
+      }
+      try {
+        const res = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: currentUser.username,
+            currentPassword,
+            newPassword
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          alert(data.error || 'Unable to change password.');
+          return;
+        }
+        alert('Password updated successfully. Please log in with your new password next time.');
+        studentPwModal.classList.add('hidden');
+      } catch (err) {
+        alert('Network error. Please try again.');
+      }
+    });
 
     // Auth Modal Logic
     const authModal = document.getElementById('authModal');
@@ -304,8 +387,8 @@
         }
 
         currentUser = data.student;
-        if (data.token) localStorage.setItem('cln_student_token', data.token);
-        localStorage.setItem('cln_student_user', JSON.stringify(currentUser));
+        if (data.token) sessionStorage.setItem('cln_student_token', data.token);
+        sessionStorage.setItem('cln_student_user', JSON.stringify(currentUser));
         showLoggedInState();
         authModal.classList.add('hidden');
       } else {
@@ -327,8 +410,8 @@
       const data = await res.json();
       if (data.success) {
         currentUser = data.student || { id: data.id, name: data.name || name, username: data.username || username, reg_number: data.reg_number };
-        if (data.token) localStorage.setItem('cln_student_token', data.token);
-        localStorage.setItem('cln_student_user', JSON.stringify(currentUser));
+        if (data.token) sessionStorage.setItem('cln_student_token', data.token);
+        sessionStorage.setItem('cln_student_user', JSON.stringify(currentUser));
         showLoggedInState();
         authModal.classList.add('hidden');
       } else {
@@ -503,10 +586,7 @@
         
         const token = getStudentToken();
         const targetUrl = 'test.html?' + params.toString();
-        _setLastSession({ url: targetUrl, startedAt: new Date().toISOString(), student_db_id: currentUser ? currentUser.id : null });
-        if (token) {
-          localStorage.setItem('cln_last_session', JSON.stringify({ url: targetUrl, startedAt: new Date().toISOString(), student_db_id: currentUser ? currentUser.id : null, token }));
-        }
+        _setLastSession({ url: targetUrl, startedAt: new Date().toISOString(), student_db_id: currentUser ? currentUser.id : null, token });
         window.location.href = targetUrl;
       };
     });

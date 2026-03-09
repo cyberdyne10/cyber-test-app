@@ -134,7 +134,7 @@
         </div>
         <div id="nextExamNotice" class="text-info mb-2" style="display:none; font-size:0.85rem;"></div>
         <div class="text-center border-top pt-3" style="border-color: rgba(255,255,255,0.1) !important;">
-          <button id="finishLogoutBtn" class="btn btn-sm btn-outline-danger">Logout & Return Home</button>
+          <button id="finishLogoutBtn" class="btn btn-sm btn-outline-primary">Return to Exam Home</button>
         </div>
       </div>
       <div id="review" class="mt-3" style="display:none;"></div>
@@ -142,7 +142,7 @@
   </div>
 
   <footer class="text-center text-muted" style="font-size:0.75rem; margin-top:1rem; opacity:0.7;">
-    Cyber-Logic Network Exam System • v1.0 • Privacy &amp; Terms (internal use)
+    Cyber‑Logic Networks Exam System • v1.0 • Privacy &amp; Terms (internal use)
   </footer>
 
   <script>
@@ -207,7 +207,7 @@
     }
 
     function getStudentToken() {
-      return localStorage.getItem('cln_student_token');
+      return sessionStorage.getItem('cln_student_token');
     }
 
     async function studentFetch(url, options = {}) {
@@ -216,8 +216,8 @@
       if (token) headers.set('Authorization', `Bearer ${token}`);
       const res = await fetch(url, { ...options, headers });
       if (res.status === 401 || res.status === 403) {
-        // token invalid/expired: force logout
-        try { localStorage.removeItem('cln_student_token'); } catch (e) {}
+        // token invalid/expired: force logout for this session
+        try { sessionStorage.removeItem('cln_student_token'); sessionStorage.removeItem('cln_student_user'); } catch (e) {}
       }
       return res;
     }
@@ -663,7 +663,8 @@
       const secsUsed = durationUsed != null ? (durationUsed % 60) : null;
       const timeUsedText = durationUsed != null ? ` • Time used: ${String(minsUsed).padStart(2,'0')}:${String(secsUsed).padStart(2,'0')}` : '';
 
-      document.getElementById('scoreText').textContent = `Score: ${data.score} / ${data.total} • Answered: ${answeredNow}/${totalQuestions} • Flagged: ${flaggedNow}${timeUsedText}`;
+      const pct = data.total ? Math.round((data.score / data.total) * 100) : 0;
+      document.getElementById('scoreText').textContent = `Score: ${data.score} / ${data.total} (${pct}%) • Answered: ${answeredNow}/${totalQuestions} • Flagged: ${flaggedNow}${timeUsedText}`;
 
       // If in full-session mode, show a brief notice and redirect to next test automatically
       const nextNoticeEl = document.getElementById('nextExamNotice');
@@ -894,9 +895,10 @@
       }, 1000);
     }
 
+    // After finishing, students should just return to the exam home screen.
+    // We do NOT log them out here; logout is only from the main student console.
     document.getElementById('finishLogoutBtn').addEventListener('click', () => {
-      localStorage.removeItem('cln_student_user');
-      try { localStorage.removeItem('cln_last_session'); } catch (e) {}
+      try { sessionStorage.removeItem('cln_last_session'); } catch (e) {}
       window.location.href = 'index.html';
     });
 
@@ -985,7 +987,7 @@
 
     // Clear stored resume marker when finishing/submitting
     function clearLastSessionMarker() {
-      try { localStorage.removeItem('cln_last_session'); } catch (e) {}
+      try { sessionStorage.removeItem('cln_last_session'); } catch (e) {}
     }
 
     const _origSubmitAnswers = submitAnswers;

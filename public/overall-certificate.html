@@ -145,8 +145,9 @@
       </div>
     </div>
 
-    <div class="text-center mt-3 no-print">
+    <div class="text-center mt-3 no-print d-flex justify-content-center gap-2 flex-wrap">
       <button onclick="window.print()" class="btn btn-primary">Print / Save as PDF</button>
+      <button onclick="window.location.href='admin.html'" class="btn btn-outline-secondary">Back to Admin Console</button>
     </div>
   </div>
 
@@ -154,10 +155,19 @@
     const params = new URLSearchParams(window.location.search);
     const studentId = params.get('student_id');
 
+    function renderError(msg) {
+      document.body.innerHTML = `
+        <div class="text-center p-5">
+          <p>${msg}</p>
+          <button class="btn btn-outline-secondary mt-3" onclick="window.location.href='admin.html'">Back to Admin Console</button>
+        </div>
+      `;
+    }
+
     if (!studentId) {
-      document.body.innerHTML = '<div class="text-center p-5">Invalid Overall Certificate Link</div>';
+      renderError('Invalid Overall Certificate Link');
     } else {
-      const token = localStorage.getItem('adminAuthToken');
+      const token = sessionStorage.getItem('adminAuthToken');
       const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
       Promise.all([
@@ -166,13 +176,13 @@
       ])
       .then(([students, attempts]) => {
         if (!Array.isArray(students) || !Array.isArray(attempts)) {
-          document.body.innerHTML = '<div class="text-center p-5">Admin login required to view this certificate.</div>';
+          renderError('Admin login required to view this certificate.');
           return;
         }
 
         const s = students.find(x => x.id == studentId);
         if (!s) {
-          document.body.innerHTML = '<div class="text-center p-5">Student not found.</div>';
+          renderError('Student not found.');
           return;
         }
         const submitted = attempts.filter(a => a.status === 'submitted');
@@ -208,7 +218,7 @@
       })
       .catch(err => {
         console.error(err);
-        document.body.innerHTML = '<div class="text-center p-5">Error loading overall certificate.</div>';
+        renderError('Error loading overall certificate.');
       });
     }
   </script>

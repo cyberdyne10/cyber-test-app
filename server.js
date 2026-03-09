@@ -868,9 +868,8 @@ app.put('/api/tests/:testId', requireAdminAuth, (req, res) => {
 app.get('/api/tests/:testId/full', requireStudentAuth, studentExamLimiter, (req, res) => {
   const testId = req.params.testId;
   const attemptId = req.query.attempt ? parseInt(req.query.attempt, 10) : null;
-  if (!attemptId) {
-    return res.status(400).json({ error: 'Attempt is required' });
-  }
+  // Note: attemptId is optional. If missing, we still allow the exam to load
+  // and rely on /submit to create the attempt record.
 
   db.get('SELECT duration_minutes, questions_per_attempt, type FROM tests WHERE id = ?', [testId], (err, testRow) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -1124,25 +1123,16 @@ app.post('/api/tests/:testId/start', requireStudentAuth, studentExamLimiter, asy
         return res.json({ attempt_id: null });
       }
 
-      // If there's an existing in-progress attempt for this student+test, resume it.
-      let sql = 'SELECT id FROM attempts WHERE test_id = ? AND status = "in-progress" AND student_db_id = ? ORDER BY id DESC LIMIT 1';
-      const params = [testId, student_db_id];
-
-      db.get(sql, params, (errExisting, row) => {
-        if (!errExisting && row && row.id) {
-          return res.json({ attempt_id: row.id, resumed: true });
+      // Always create a fresh attempt for this student+test.
+      // We no longer auto-resume in-progress attempts; each session is independent.
+      db.run(
+        'INSERT INTO attempts (student_name, student_id, student_db_id, test_id, score, total, status) VALUES (?, ?, ?, ?, 0, 0, ?)',
+        [student_name, student_id, student_db_id, testId, 'in-progress'],
+        function(err3) {
+          if (err3) return res.status(500).json({ error: err3.message });
+          res.json({ attempt_id: this.lastID, resumed: false });
         }
-
-        // Otherwise create new attempt
-        db.run(
-          'INSERT INTO attempts (student_name, student_id, student_db_id, test_id, score, total, status) VALUES (?, ?, ?, ?, 0, 0, ?)',
-          [student_name, student_id, student_db_id, testId, 'in-progress'],
-          function(err3) {
-            if (err3) return res.status(500).json({ error: err3.message });
-            res.json({ attempt_id: this.lastID, resumed: false });
-          }
-        );
-      });
+      );
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
